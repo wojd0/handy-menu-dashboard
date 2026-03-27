@@ -111,7 +111,7 @@ struct SettingsView: View {
                     .textFieldStyle(.roundedBorder)
 
                 Link("Create a fine-grained PAT with \"Plan\" read permission",
-                     destination: URL(string: "https://github.com/settings/personal-access-tokens/new?description=Wojciech+Little+Dashboard&expiration=none&permissions=plan:read")!)
+                     destination: URL(string: "https://github.com/settings/personal-access-tokens/new?description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read")!)
                     .font(.caption)
 
                 HStack {
