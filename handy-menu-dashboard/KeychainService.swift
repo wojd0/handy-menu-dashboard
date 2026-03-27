@@ -13,7 +13,7 @@ enum KeychainService {
         delete(key: key)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "wojciech-little-dashboard",
+            kSecAttrService as String: "handy-menu-dashboard",
             kSecAttrAccount as String: key.rawValue,
             kSecValueData as String: data
         ]
@@ -23,7 +23,7 @@ enum KeychainService {
     static func load(key: Key) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "wojciech-little-dashboard",
+            kSecAttrService as String: "handy-menu-dashboard",
             kSecAttrAccount as String: key.rawValue,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -37,7 +37,7 @@ enum KeychainService {
     static func delete(key: Key) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "wojciech-little-dashboard",
+            kSecAttrService as String: "handy-menu-dashboard",
             kSecAttrAccount as String: key.rawValue
         ]
         SecItemDelete(query as CFDictionary)
