@@ -8,6 +8,7 @@ This is a **macOS-only** SwiftUI menu bar app (not iOS). `SUPPORTED_PLATFORMS = 
 
 - **Open in Xcode:** `open "handy-menu-dashboard.xcodeproj"` then Cmd+R
 - **Build from CLI:** `xcodebuild -project "handy-menu-dashboard.xcodeproj" -scheme "handy-menu-dashboard" build`
+- **Install while iterating:** `make install-dev` builds Release and replaces `~/Applications/handy-menu-dashboard.app`
 
 Scheme name: `handy-menu-dashboard`
 

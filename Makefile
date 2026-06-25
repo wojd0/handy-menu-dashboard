@@ -1,10 +1,13 @@
-.PHONY: build test lint
+.PHONY: build install-dev test lint
 
 build:
-	./scripts/build.sh
+	./build.sh
+
+install-dev:
+	./install-dev.sh
 
 test:
-	./scripts/test.sh
+	./test.sh
 
 lint:
-	./scripts/lint.sh
+	./lint.sh

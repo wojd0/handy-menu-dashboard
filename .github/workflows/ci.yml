@@ -20,10 +20,10 @@ jobs:
           xcode-version: "26.4"
 
       - name: Build
-        run: ./scripts/build.sh
+        run: ./build.sh
 
       - name: Test
-        run: ./scripts/test.sh
+        run: ./test.sh
 
   lint:
     runs-on: macos-26
@@ -33,4 +33,4 @@ jobs:
       - name: SwiftLint
         run: |
           brew install swiftlint
-          ./scripts/lint.sh
+          ./lint.sh
