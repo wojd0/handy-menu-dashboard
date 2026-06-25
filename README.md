@@ -8,10 +8,9 @@ A macOS menu bar app that tracks coding-agent usage at a glance: Cursor team spe
 ## Features
 
 - **Cursor** — Shows your current billing-period spend against your team per-user monthly limit, fetched from Cursor dashboard APIs.
-- **GitHub Copilot** — Tracks premium request usage for the current month against a configurable entitlement.
-- **Menu bar summary** — Compact `$spent/limit` or `used/entitlement` labels (toggle to percent view in settings).
-- **Auto-refresh** — Polls both services every three minutes while enabled.
+- **Menu bar summary** — Compact `$spent/limit` or percentage labels (toggle to percent view in settings).
 - **Secure credentials** — Session cookies and PATs are stored in the macOS Keychain; the app runs sandboxed with outbound network only.
+- **GitHub Copilot** — Tracks premium request usage for the current month against a configurable entitlement. (not yet implemented)
 
 ## Requirements
 
