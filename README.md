@@ -31,7 +31,7 @@ Select the **handy-menu-dashboard** scheme and press **Cmd+R**.
 
 ```bash
 make build        # Release build (unsigned)
-make install-dev  # Build and replace the app in ~/Applications
+make install-dev  # Build and replace the app in /Applications and ~/Applications
 make test         # Run unit tests (unsigned)
 make lint         # SwiftLint (optional, advisory)
 ```

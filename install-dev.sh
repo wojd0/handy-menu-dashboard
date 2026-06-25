@@ -8,9 +8,10 @@ APP_NAME="handy-menu-dashboard"
 APP_BUNDLE="$APP_NAME.app"
 DERIVED_DATA="$ROOT/build/DerivedData"
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/$APP_BUNDLE"
-APPLICATIONS_DIR="$HOME/Applications"
-TARGET_APP="$APPLICATIONS_DIR/$APP_BUNDLE"
-STAGED_APP="$APPLICATIONS_DIR/.$APP_BUNDLE.installing"
+INSTALL_DIRS=(
+  "/Applications"
+  "$HOME/Applications"
+)
 
 xcodebuild \
   -project "handy-menu-dashboard.xcodeproj" \
@@ -28,10 +29,22 @@ if [[ ! -d "$BUILT_APP" ]]; then
   exit 1
 fi
 
-mkdir -p "$APPLICATIONS_DIR"
-rm -rf "$STAGED_APP"
-ditto "$BUILT_APP" "$STAGED_APP"
-rm -rf "$TARGET_APP"
-mv "$STAGED_APP" "$TARGET_APP"
+for applications_dir in "${INSTALL_DIRS[@]}"; do
+  target_app="$applications_dir/$APP_BUNDLE"
+  staged_app="$applications_dir/.$APP_BUNDLE.installing"
 
-echo "Installed $APP_BUNDLE to $APPLICATIONS_DIR"
+  mkdir -p "$applications_dir"
+  rm -rf "$staged_app"
+  ditto "$BUILT_APP" "$staged_app"
+  rm -rf "$target_app"
+  mv "$staged_app" "$target_app"
+
+  echo "Installed $APP_BUNDLE to $applications_dir"
+done
+
+if pgrep -xq "$APP_NAME"; then
+  osascript -e "quit app \"$APP_NAME\"" >/dev/null 2>&1 || true
+  sleep 1
+fi
+
+open -a "${INSTALL_DIRS[0]}/$APP_BUNDLE"
