@@ -24,6 +24,11 @@ final class CopilotService {
         return "\(totalUsed)/\(monthlyEntitlement)"
     }
 
+    var menuBarPercentFragment: String {
+        guard isActive else { return "" }
+        return "\(Int(percentUsed.rounded()))%"
+    }
+
     init() {
         isEnabled = (UserDefaults.standard.object(forKey: "copilotEnabled") as? Bool) ?? true
         loadCredentials()

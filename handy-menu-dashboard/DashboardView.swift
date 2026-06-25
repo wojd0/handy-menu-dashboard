@@ -53,7 +53,7 @@ struct DashboardView: View {
             Divider()
 
             HStack {
-                Button(action: { openWindow(id: "settings") }) {
+                Button(action: openSettings) {
                     Image(systemName: "gearshape")
                 }
                 .buttonStyle(.plain)
@@ -75,6 +75,20 @@ struct DashboardView: View {
                 group.addTask { await cursorService.refresh() }
                 group.addTask { await copilotService.refresh() }
             }
+        }
+    }
+
+    private func openSettings() {
+        openWindow(id: "settings")
+
+        DispatchQueue.main.async {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+
+            let settingsWindow = NSApplication.shared.windows.first { window in
+                window.identifier?.rawValue.contains("settings") == true || window.title == "Settings"
+            }
+            settingsWindow?.makeKeyAndOrderFront(nil)
+            settingsWindow?.orderFrontRegardless()
         }
     }
 }

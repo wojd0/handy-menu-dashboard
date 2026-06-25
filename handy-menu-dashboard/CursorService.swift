@@ -38,6 +38,11 @@ final class CursorService {
         return "$\(dollars)/\(monthlyLimitDollars)"
     }
 
+    var menuBarPercentFragment: String {
+        guard isActive else { return "" }
+        return "\(Int(spendPercentUsed.rounded()))%"
+    }
+
     init() {
         isEnabled = (UserDefaults.standard.object(forKey: "cursorEnabled") as? Bool) ?? true
         loadCredentials()
