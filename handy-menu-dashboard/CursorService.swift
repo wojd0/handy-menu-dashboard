@@ -107,7 +107,7 @@ final class CursorService {
                 if userName == nil { userName = myEntry.name }
 
                 if let teamId = extractCookieValue(named: "team_id", from: cookieHeader).flatMap({ Int($0) }),
-                   let userId = myEntry.userId {
+                   let userId = myEntry.resolvedUserId {
                     spendCents = try await fetchCurrentPeriodSpendCents(cookie: cookieHeader, teamId: teamId, userId: userId)
                 } else {
                     spendCents = myEntry.spendCents ?? myEntry.overallSpendCents ?? 0
@@ -295,11 +295,17 @@ private struct TeamSpendResponse: Decodable {
     struct TeamMember: Decodable {
         let name: String?
         let email: String
-        let userId: Int?
+        let userId: FlexibleInt?
+        let id: FlexibleInt?
+        let user_id: FlexibleInt?
         let spendCents: Int?
         let overallSpendCents: Int?
         let monthlyLimitDollars: Int?
         let effectivePerUserLimitDollars: Int?
+
+        var resolvedUserId: Int? {
+            userId?.value ?? id?.value ?? user_id?.value
+        }
     }
 }
 
@@ -309,5 +315,20 @@ private struct FilteredUsageEventsResponse: Decodable {
 
     struct UsageEvent: Decodable {
         let chargedCents: Double?
+    }
+}
+
+private struct FlexibleInt: Decodable {
+    let value: Int?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let intValue = try? container.decode(Int.self) {
+            value = intValue
+        } else if let stringValue = try? container.decode(String.self) {
+            value = Int(stringValue)
+        } else {
+            value = nil
+        }
     }
 }

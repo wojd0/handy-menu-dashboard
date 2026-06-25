@@ -55,6 +55,7 @@ struct DashboardView: View {
             HStack {
                 Button(action: openSettings) {
                     Image(systemName: "gearshape")
+                        .font(.title2)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
