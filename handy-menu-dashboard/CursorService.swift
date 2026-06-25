@@ -15,10 +15,10 @@ final class CursorService {
     private var cookieHeader: String?
     private var userEmail: String?
     private var refreshTask: Task<Void, Never>?
+    private let keychain: any KeychainStoring
 
     var spendFormatted: String {
-        let dollars = Double(spendCents) / 100.0
-        return String(format: "$%.2f", dollars)
+        UsageMath.formatCentsAsDollars(spendCents)
     }
 
     var limitFormatted: String {
@@ -26,24 +26,23 @@ final class CursorService {
     }
 
     var spendPercentUsed: Double {
-        guard monthlyLimitDollars > 0 else { return 0 }
-        return Double(spendCents) / Double(monthlyLimitDollars * 100) * 100
+        UsageMath.spendPercentUsed(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
     }
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
     var menuBarFragment: String {
         guard isActive else { return "" }
-        let dollars = Int(Double(spendCents) / 100.0)
-        return "$\(dollars)/\(monthlyLimitDollars)"
+        return UsageMath.cursorMenuBarFragment(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
     }
 
     var menuBarPercentFragment: String {
         guard isActive else { return "" }
-        return "\(Int(spendPercentUsed.rounded()))%"
+        return UsageMath.menuBarPercentFragment(percent: spendPercentUsed)
     }
 
-    init() {
+    init(keychain: any KeychainStoring = KeychainStore()) {
+        self.keychain = keychain
         isEnabled = (UserDefaults.standard.object(forKey: "cursorEnabled") as? Bool) ?? true
         loadCredentials()
         startAutoRefresh()
@@ -52,14 +51,14 @@ final class CursorService {
     func saveCookies(_ cookies: [HTTPCookie]) {
         let header = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
         guard !header.isEmpty else { return }
-        KeychainService.saveString(key: .cursorCookies, value: header)
+        keychain.saveString(key: .cursorCookies, value: header)
         cookieHeader = header
         isAuthenticated = true
         Task { await refresh() }
     }
 
     func clearCredentials() {
-        KeychainService.delete(key: .cursorCookies)
+        keychain.delete(key: .cursorCookies)
         cookieHeader = nil
         userEmail = nil
         isAuthenticated = false
@@ -259,7 +258,7 @@ final class CursorService {
     }
 
     private func loadCredentials() {
-        if let header = KeychainService.loadString(key: .cursorCookies), !header.isEmpty {
+        if let header = keychain.loadString(key: .cursorCookies), !header.isEmpty {
             cookieHeader = header
             isAuthenticated = true
         }
@@ -287,48 +286,4 @@ final class CursorService {
 private struct AuthMeResponse: Decodable {
     let email: String?
     let name: String?
-}
-
-private struct TeamSpendResponse: Decodable {
-    let teamMemberSpend: [TeamMember]
-
-    struct TeamMember: Decodable {
-        let name: String?
-        let email: String
-        let userId: FlexibleInt?
-        let id: FlexibleInt?
-        let user_id: FlexibleInt?
-        let spendCents: Int?
-        let overallSpendCents: Int?
-        let monthlyLimitDollars: Int?
-        let effectivePerUserLimitDollars: Int?
-
-        var resolvedUserId: Int? {
-            userId?.value ?? id?.value ?? user_id?.value
-        }
-    }
-}
-
-private struct FilteredUsageEventsResponse: Decodable {
-    let totalUsageEventsCount: Int
-    let usageEventsDisplay: [UsageEvent]
-
-    struct UsageEvent: Decodable {
-        let chargedCents: Double?
-    }
-}
-
-private struct FlexibleInt: Decodable {
-    let value: Int?
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let intValue = try? container.decode(Int.self) {
-            value = intValue
-        } else if let stringValue = try? container.decode(String.self) {
-            value = Int(stringValue)
-        } else {
-            value = nil
-        }
-    }
 }

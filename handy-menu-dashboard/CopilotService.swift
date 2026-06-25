@@ -16,20 +16,22 @@ final class CopilotService {
     var username: String = ""
     private var pat: String = ""
     private var refreshTask: Task<Void, Never>?
+    private let keychain: any KeychainStoring
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
     var menuBarFragment: String {
         guard isActive else { return "" }
-        return "\(totalUsed)/\(monthlyEntitlement)"
+        return UsageMath.copilotMenuBarFragment(totalUsed: totalUsed, monthlyEntitlement: monthlyEntitlement)
     }
 
     var menuBarPercentFragment: String {
         guard isActive else { return "" }
-        return "\(Int(percentUsed.rounded()))%"
+        return UsageMath.menuBarPercentFragment(percent: percentUsed)
     }
 
-    init() {
+    init(keychain: any KeychainStoring = KeychainStore()) {
+        self.keychain = keychain
         isEnabled = (UserDefaults.standard.object(forKey: "copilotEnabled") as? Bool) ?? true
         loadCredentials()
         startAutoRefresh()
@@ -39,21 +41,21 @@ final class CopilotService {
         guard !username.isEmpty, !pat.isEmpty else { return }
         self.username = username
         self.pat = pat
-        KeychainService.saveString(key: .copilotUsername, value: username)
-        KeychainService.saveString(key: .copilotPAT, value: pat)
+        keychain.saveString(key: .copilotUsername, value: username)
+        keychain.saveString(key: .copilotPAT, value: pat)
         isAuthenticated = true
         Task { await refresh() }
     }
 
     func saveEntitlement(_ value: Int) {
         monthlyEntitlement = value
-        KeychainService.saveString(key: .copilotEntitlement, value: String(value))
+        keychain.saveString(key: .copilotEntitlement, value: String(value))
         recalculate()
     }
 
     func clearCredentials() {
-        KeychainService.delete(key: .copilotUsername)
-        KeychainService.delete(key: .copilotPAT)
+        keychain.delete(key: .copilotUsername)
+        keychain.delete(key: .copilotPAT)
         username = ""
         pat = ""
         isAuthenticated = false
@@ -121,19 +123,19 @@ final class CopilotService {
     }
 
     private func recalculate() {
-        percentUsed = monthlyEntitlement > 0 ? Double(totalUsed) / Double(monthlyEntitlement) * 100 : 0
-        isOverLimit = percentUsed > 100
+        percentUsed = UsageMath.copilotPercentUsed(totalUsed: totalUsed, monthlyEntitlement: monthlyEntitlement)
+        isOverLimit = UsageMath.isOverLimit(percentUsed: percentUsed)
     }
 
     private func loadCredentials() {
-        if let savedUsername = KeychainService.loadString(key: .copilotUsername),
-           let savedPAT = KeychainService.loadString(key: .copilotPAT),
+        if let savedUsername = keychain.loadString(key: .copilotUsername),
+           let savedPAT = keychain.loadString(key: .copilotPAT),
            !savedUsername.isEmpty, !savedPAT.isEmpty {
             username = savedUsername
             pat = savedPAT
             isAuthenticated = true
         }
-        if let savedEntitlement = KeychainService.loadString(key: .copilotEntitlement),
+        if let savedEntitlement = keychain.loadString(key: .copilotEntitlement),
            let value = Int(savedEntitlement) {
             monthlyEntitlement = value
         }

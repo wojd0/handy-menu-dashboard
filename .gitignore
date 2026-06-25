@@ -12,3 +12,8 @@ build/
 .build/
 .swiftpm/
 Package.resolved
+
+# Captures and local tooling
+*.har
+node_modules/
+electron-vault/
