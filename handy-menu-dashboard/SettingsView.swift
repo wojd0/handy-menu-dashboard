@@ -7,9 +7,11 @@ struct SettingsView: View {
     @State private var githubUsername = ""
     @State private var githubPAT = ""
     @State private var copilotEntitlement = ""
+    @AppStorage("menuBarShowPercent") private var showPercent = false
 
     var body: some View {
         VStack(spacing: 16) {
+            displaySection
             cursorSection
             copilotSection
         }
@@ -22,6 +24,24 @@ struct SettingsView: View {
             githubUsername = copilotService.username
             copilotEntitlement = String(copilotService.monthlyEntitlement)
         }
+    }
+
+    private var displaySection: some View {
+        HStack {
+            Image(systemName: "menubar.rectangle")
+            Text("Menu Bar")
+                .font(.headline)
+            Spacer()
+            Picker("", selection: $showPercent) {
+                Text("Dollars").tag(false)
+                Text("Percent").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+        }
+        .padding(16)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var cursorSection: some View {

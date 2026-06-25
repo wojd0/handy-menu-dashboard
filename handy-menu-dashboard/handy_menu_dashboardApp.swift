@@ -24,10 +24,11 @@ struct handy_menu_dashboardApp: App {
 struct MenuBarLabel: View {
     var cursorService: CursorService
     var copilotService: CopilotService
+    @AppStorage("menuBarShowPercent") private var showPercent = false
 
     var body: some View {
-        let cursorText = cursorService.menuBarFragment
-        let copilotText = copilotService.menuBarFragment
+        let cursorText = showPercent ? cursorService.menuBarPercentFragment : cursorService.menuBarFragment
+        let copilotText = showPercent ? copilotService.menuBarPercentFragment : copilotService.menuBarFragment
         let hasCursor = !cursorText.isEmpty
         let hasCopilot = !copilotText.isEmpty
 
