@@ -17,7 +17,9 @@ struct SettingsView: View {
         VStack(spacing: 16) {
             displaySection
             cursorSection
-            copilotSection
+            if FeatureFlags.showGitHubSettings {
+                copilotSection
+            }
         }
         .padding(20)
         .frame(width: 380)

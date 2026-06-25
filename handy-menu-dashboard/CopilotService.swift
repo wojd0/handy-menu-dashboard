@@ -18,7 +18,7 @@ final class CopilotService {
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
 
-    var isActive: Bool { isAuthenticated && isEnabled }
+    var isActive: Bool { FeatureFlags.showGitHubSettings && isAuthenticated && isEnabled }
 
     var menuBarFragment: String {
         guard isActive else { return "" }
