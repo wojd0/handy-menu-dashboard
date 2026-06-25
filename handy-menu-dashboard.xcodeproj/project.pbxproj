@@ -8,7 +8,18 @@
 
 /* Begin PBXFileReference section */
 		6C2F752C2F742CE20051EFE8 /* handy-menu-dashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "handy-menu-dashboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C2F75402F742CE50051EFE8 /* handy-menu-dashboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "handy-menu-dashboardTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXContainerItemProxy section */
+		6C2F75442F742CE50051EFE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6C2F75242F742CE20051EFE8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6C2F752B2F742CE20051EFE8;
+			remoteInfo = "handy-menu-dashboard";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6C2F752E2F742CE20051EFE8 /* handy-menu-dashboard */ = {
@@ -16,10 +27,22 @@
 			path = "handy-menu-dashboard";
 			sourceTree = "<group>";
 		};
+		6C2F75412F742CE50051EFE8 /* handy-menu-dashboardTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "handy-menu-dashboardTests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		6C2F75292F742CE20051EFE8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6C2F75452F742CE50051EFE8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				6C2F752E2F742CE20051EFE8 /* handy-menu-dashboard */,
+				6C2F75412F742CE50051EFE8 /* handy-menu-dashboardTests */,
 				6C2F752D2F742CE20051EFE8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				6C2F752C2F742CE20051EFE8 /* handy-menu-dashboard.app */,
+				6C2F75402F742CE50051EFE8 /* handy-menu-dashboardTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,7 +95,38 @@
 			productReference = 6C2F752C2F742CE20051EFE8 /* handy-menu-dashboard.app */;
 			productType = "com.apple.product-type.application";
 		};
+		6C2F75422F742CE50051EFE8 /* handy-menu-dashboardTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C2F75482F742CE50051EFE8 /* Build configuration list for PBXNativeTarget "handy-menu-dashboardTests" */;
+			buildPhases = (
+				6C2F75462F742CE50051EFE8 /* Sources */,
+				6C2F75452F742CE50051EFE8 /* Frameworks */,
+				6C2F75472F742CE50051EFE8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6C2F75432F742CE50051EFE8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6C2F75412F742CE50051EFE8 /* handy-menu-dashboardTests */,
+			);
+			name = "handy-menu-dashboardTests";
+			packageProductDependencies = (
+			);
+			productName = "handy-menu-dashboardTests";
+			productReference = 6C2F75402F742CE50051EFE8 /* handy-menu-dashboardTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXTargetDependency section */
+		6C2F75432F742CE50051EFE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6C2F752B2F742CE20051EFE8 /* handy-menu-dashboard */;
+			targetProxy = 6C2F75442F742CE50051EFE8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		6C2F75242F742CE20051EFE8 /* Project object */ = {
@@ -82,6 +138,10 @@
 				TargetAttributes = {
 					6C2F752B2F742CE20051EFE8 = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					6C2F75422F742CE50051EFE8 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 6C2F752B2F742CE20051EFE8;
 					};
 				};
 			};
@@ -100,6 +160,7 @@
 			projectRoot = "";
 			targets = (
 				6C2F752B2F742CE20051EFE8 /* handy-menu-dashboard */,
+				6C2F75422F742CE50051EFE8 /* handy-menu-dashboardTests */,
 			);
 		};
 /* End PBXProject section */
@@ -112,10 +173,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6C2F75472F742CE50051EFE8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6C2F75282F742CE20051EFE8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6C2F75462F742CE50051EFE8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -160,7 +235,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = U9XUXK32P5;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -224,7 +299,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = U9XUXK32P5;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -254,7 +329,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = U9XUXK32P5;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -288,7 +363,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = U9XUXK32P5;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -313,6 +388,48 @@
 			};
 			name = Release;
 		};
+		6C2F75492F742CE50051EFE8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wojd0.handy-menu-dashboardTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/handy-menu-dashboard.app/Contents/MacOS/handy-menu-dashboard";
+			};
+			name = Debug;
+		};
+		6C2F754A2F742CE50051EFE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "wojd0.handy-menu-dashboardTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/handy-menu-dashboard.app/Contents/MacOS/handy-menu-dashboard";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -330,6 +447,15 @@
 			buildConfigurations = (
 				6C2F75382F742CE40051EFE8 /* Debug */,
 				6C2F75392F742CE40051EFE8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6C2F75482F742CE50051EFE8 /* Build configuration list for PBXNativeTarget "handy-menu-dashboardTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C2F75492F742CE50051EFE8 /* Debug */,
+				6C2F754A2F742CE50051EFE8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

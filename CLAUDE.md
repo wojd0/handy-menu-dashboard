@@ -30,7 +30,7 @@ Services (`CursorService`, `CopilotService`) are `@Observable` classes created a
 ### Services
 - **CursorService** — Fetches Cursor IDE team spend via `cursor.com/api/dashboard/get-team-spend`. Cookie-based auth (WebView login flow). Extracts `team_id` from cookies to call the team spend endpoint, then finds the current user's entry by email.
 - **CopilotService** — Fetches GitHub Copilot premium request usage via GitHub API. Fine-grained PAT auth. User-configurable monthly entitlement (default 300).
-- **KeychainService** — Enum with static helpers wrapping macOS Security framework (`SecItem*` APIs) for credential storage. All keys prefixed `com.wojd0.dashboard.*`.
+- **KeychainStoring** / **KeychainStore** — Protocol + production implementation wrapping macOS Security framework (`SecItem*` APIs) for credential storage. Injected into services; tests use `InMemoryKeychainStore`. All keys prefixed `com.wojd0.dashboard.*`.
 
 ### Views
 - **handy_menu_dashboardApp** — App entry point. `MenuBarExtra` shows usage summary; separate `Window("Settings", id: "settings")` opened via `openWindow`.

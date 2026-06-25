@@ -1,0 +1,35 @@
+disabled_rules:
+  - trailing_whitespace
+  - todo
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - redundant_nil_coalescing
+
+included:
+  - handy-menu-dashboard
+  - handy-menu-dashboardTests
+
+line_length:
+  warning: 140
+  error: 200
+
+type_body_length:
+  warning: 300
+
+file_length:
+  warning: 500
+
+function_body_length:
+  warning: 60
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+
+reporter: xcode
