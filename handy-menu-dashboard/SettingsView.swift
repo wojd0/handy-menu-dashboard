@@ -8,6 +8,10 @@ struct SettingsView: View {
     @State private var githubPAT = ""
     @State private var copilotEntitlement = ""
     @AppStorage("menuBarShowPercent") private var showPercent = false
+    private let fineGrainedPATURL = URL(
+        string: "https://github.com/settings/personal-access-tokens/new?"
+            + "description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read"
+    )!
 
     var body: some View {
         VStack(spacing: 16) {
@@ -131,7 +135,7 @@ struct SettingsView: View {
                     .textFieldStyle(.roundedBorder)
 
                 Link("Create a fine-grained PAT with \"Plan\" read permission",
-                     destination: URL(string: "https://github.com/settings/personal-access-tokens/new?description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read")!)
+                     destination: fineGrainedPATURL)
                     .font(.caption)
 
                 HStack {

@@ -25,7 +25,7 @@ struct FilteredUsageEventsTests {
     @Test func sumChargedCentsRoundsFractionalCents() {
         let events = [
             FilteredUsageEventsResponse.UsageEvent(chargedCents: 10.4),
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 20.6),
+            FilteredUsageEventsResponse.UsageEvent(chargedCents: 20.6)
         ]
 
         #expect(UsageMath.sumChargedCents(from: events) == 31)
@@ -35,7 +35,7 @@ struct FilteredUsageEventsTests {
         let events = [
             FilteredUsageEventsResponse.UsageEvent(chargedCents: 5),
             FilteredUsageEventsResponse.UsageEvent(chargedCents: nil),
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 2.75),
+            FilteredUsageEventsResponse.UsageEvent(chargedCents: 2.75)
         ]
 
         #expect(UsageMath.sumChargedCents(from: events) == 8)

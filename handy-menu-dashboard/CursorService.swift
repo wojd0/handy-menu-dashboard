@@ -73,61 +73,22 @@ final class CursorService {
 
         isLoading = true
         error = nil
+        defer { isLoading = false }
 
         do {
-            if userEmail == nil {
-                let me = try await fetchMe(cookie: cookieHeader)
-                userEmail = me.email
-                userName = me.name
-            }
-        } catch let error as ServiceError {
-            handleServiceError(error)
-            isLoading = false
-            return
-        } catch {
-            self.error = "Failed to verify session"
-            isLoading = false
-            return
-        }
-
-        guard let email = userEmail else {
-            self.error = "Could not determine user email"
-            isLoading = false
-            return
-        }
-
-        isAuthenticated = true
-
-        do {
+            let email = try await verifiedUserEmail(cookie: cookieHeader)
             let spend = try await fetchTeamSpend(cookie: cookieHeader)
 
             if let myEntry = spend.teamMemberSpend.first(where: { $0.email.lowercased() == email.lowercased() }) {
                 monthlyLimitDollars = myEntry.effectivePerUserLimitDollars ?? myEntry.monthlyLimitDollars ?? 0
                 if userName == nil { userName = myEntry.name }
-
-                if let teamId = extractCookieValue(named: "team_id", from: cookieHeader).flatMap({ Int($0) }),
-                   let userId = myEntry.resolvedUserId {
-                    spendCents = try await fetchCurrentPeriodSpendCents(cookie: cookieHeader, teamId: teamId, userId: userId)
-                } else {
-                    spendCents = myEntry.spendCents ?? myEntry.overallSpendCents ?? 0
-                }
+                spendCents = try await resolvedSpendCents(for: myEntry, cookie: cookieHeader)
             }
         } catch let error as ServiceError {
-            switch error {
-            case .authExpired:
-                self.error = "Team spend access denied. Session may have expired."
-            case .httpError(let code):
-                self.error = "Team spend returned status \(code)"
-            case .network:
-                self.error = "Unable to connect to Cursor"
-            case .invalidResponse:
-                self.error = "Invalid team spend response"
-            }
+            handleServiceError(error)
         } catch {
-            self.error = "Failed to load team spend"
+            self.error = "Failed to load Cursor usage"
         }
-
-        isLoading = false
     }
 
     private func fetchMe(cookie: String) async throws -> AuthMeResponse {
@@ -148,6 +109,30 @@ final class CursorService {
             body: jsonBody
         )
         return try JSONDecoder().decode(TeamSpendResponse.self, from: data)
+    }
+
+    private func verifiedUserEmail(cookie: String) async throws -> String {
+        if userEmail == nil {
+            let me = try await fetchMe(cookie: cookie)
+            userEmail = me.email
+            userName = me.name
+        }
+
+        guard let email = userEmail else {
+            throw ServiceError.invalidResponse
+        }
+
+        isAuthenticated = true
+        return email
+    }
+
+    private func resolvedSpendCents(for member: TeamSpendResponse.TeamMember, cookie: String) async throws -> Int {
+        if let teamId = extractCookieValue(named: "team_id", from: cookie).flatMap({ Int($0) }),
+           let userId = member.resolvedUserId {
+            return try await fetchCurrentPeriodSpendCents(cookie: cookie, teamId: teamId, userId: userId)
+        }
+
+        return member.spendCents ?? member.overallSpendCents ?? 0
     }
 
     private func fetchCurrentPeriodSpendCents(cookie: String, teamId: Int, userId: Int) async throws -> Int {
@@ -209,11 +194,20 @@ final class CursorService {
         return nil
     }
 
-    private func performRequest(url: String, cookie: String, method: String = "GET", body: Data? = nil) async throws(ServiceError) -> (Data, URLResponse) {
+    private func performRequest(
+        url: String,
+        cookie: String,
+        method: String = "GET",
+        body: Data? = nil
+    ) async throws(ServiceError) -> (Data, URLResponse) {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = method
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                + "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

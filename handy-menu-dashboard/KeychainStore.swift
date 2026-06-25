@@ -10,7 +10,7 @@ struct KeychainStore: KeychainStoring {
 
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -49,7 +49,7 @@ struct KeychainStore: KeychainStoring {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
-            kSecAttrAccount as String: key.rawValue,
+            kSecAttrAccount as String: key.rawValue
         ]
     }
 
