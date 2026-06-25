@@ -30,17 +30,19 @@ Select the **handy-menu-dashboard** scheme and press **Cmd+R**.
 ### Command line
 
 ```bash
-make build    # Release build (unsigned)
-make test     # Run unit tests (unsigned)
-make lint     # SwiftLint (optional, advisory)
+make build        # Release build (unsigned)
+make install-dev  # Build and replace the app in ~/Applications
+make test         # Run unit tests (unsigned)
+make lint         # SwiftLint (optional, advisory)
 ```
 
 Or run the scripts directly:
 
 ```bash
-./scripts/build.sh
-./scripts/test.sh
-./scripts/lint.sh
+./build.sh
+./install-dev.sh
+./test.sh
+./lint.sh
 ```
 
 ## Configuration
