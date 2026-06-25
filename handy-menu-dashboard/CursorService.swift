@@ -98,9 +98,15 @@ final class CursorService {
             let spend = try await fetchTeamSpend(cookie: cookieHeader)
 
             if let myEntry = spend.teamMemberSpend.first(where: { $0.email.lowercased() == email.lowercased() }) {
-                spendCents = myEntry.spendCents ?? myEntry.overallSpendCents ?? 0
                 monthlyLimitDollars = myEntry.effectivePerUserLimitDollars ?? myEntry.monthlyLimitDollars ?? 0
                 if userName == nil { userName = myEntry.name }
+
+                if let teamId = extractCookieValue(named: "team_id", from: cookieHeader).flatMap({ Int($0) }),
+                   let userId = myEntry.userId {
+                    spendCents = try await fetchCurrentPeriodSpendCents(cookie: cookieHeader, teamId: teamId, userId: userId)
+                } else {
+                    spendCents = myEntry.spendCents ?? myEntry.overallSpendCents ?? 0
+                }
             }
         } catch let error as ServiceError {
             switch error {
@@ -138,6 +144,55 @@ final class CursorService {
             body: jsonBody
         )
         return try JSONDecoder().decode(TeamSpendResponse.self, from: data)
+    }
+
+    private func fetchCurrentPeriodSpendCents(cookie: String, teamId: Int, userId: Int) async throws -> Int {
+        let (startDate, endDate) = currentPeriodRangeMilliseconds()
+        let pageSize = 1000
+        var page = 1
+        var totalCents = 0.0
+
+        while true {
+            let body: [String: Any] = [
+                "teamId": teamId,
+                "startDate": startDate,
+                "endDate": endDate,
+                "userId": userId,
+                "page": page,
+                "pageSize": pageSize
+            ]
+            let jsonBody = try? JSONSerialization.data(withJSONObject: body)
+            let (data, _) = try await performRequest(
+                url: "https://cursor.com/api/dashboard/get-filtered-usage-events",
+                cookie: cookie,
+                method: "POST",
+                body: jsonBody
+            )
+            let response = try JSONDecoder().decode(FilteredUsageEventsResponse.self, from: data)
+
+            totalCents += response.usageEventsDisplay.reduce(0.0) { $0 + ($1.chargedCents ?? 0) }
+
+            if response.usageEventsDisplay.isEmpty || page * pageSize >= response.totalUsageEventsCount {
+                break
+            }
+            page += 1
+        }
+
+        return Int(totalCents.rounded())
+    }
+
+    private func currentPeriodRangeMilliseconds() -> (start: String, end: String) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+
+        let now = Date()
+        let monthComponents = calendar.dateComponents([.year, .month], from: now)
+        let startOfMonth = calendar.date(from: monthComponents) ?? now
+
+        let startMs = Int64(startOfMonth.timeIntervalSince1970 * 1000)
+        let endMs = Int64(now.timeIntervalSince1970 * 1000)
+
+        return (String(startMs), String(endMs))
     }
 
     private func extractCookieValue(named name: String, from cookieHeader: String) -> String? {
@@ -235,9 +290,19 @@ private struct TeamSpendResponse: Decodable {
     struct TeamMember: Decodable {
         let name: String?
         let email: String
+        let userId: Int?
         let spendCents: Int?
         let overallSpendCents: Int?
         let monthlyLimitDollars: Int?
         let effectivePerUserLimitDollars: Int?
+    }
+}
+
+private struct FilteredUsageEventsResponse: Decodable {
+    let totalUsageEventsCount: Int
+    let usageEventsDisplay: [UsageEvent]
+
+    struct UsageEvent: Decodable {
+        let chargedCents: Double?
     }
 }
