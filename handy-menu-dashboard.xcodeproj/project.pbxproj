@@ -77,6 +77,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6C2F75372F742CE40051EFE8 /* Build configuration list for PBXNativeTarget "handy-menu-dashboard" */;
 			buildPhases = (
+				6C2F75522F7430000051EFE8 /* Generate Feature Flags */,
 				6C2F75282F742CE20051EFE8 /* Sources */,
 				6C2F75292F742CE20051EFE8 /* Frameworks */,
 				6C2F752A2F742CE20051EFE8 /* Resources */,
@@ -198,6 +199,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		6C2F75522F7430000051EFE8 /* Generate Feature Flags */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.env",
+				"$(SRCROOT)/scripts/generate-feature-flags.sh",
+			);
+			name = "Generate Feature Flags";
+			outputPaths = (
+				"$(SRCROOT)/handy-menu-dashboard/FeatureFlags+Generated.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/generate-feature-flags.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		6C2F75352F742CE40051EFE8 /* Debug */ = {

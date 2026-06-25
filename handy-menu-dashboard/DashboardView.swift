@@ -74,7 +74,9 @@ struct DashboardView: View {
         .task {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await cursorService.refresh() }
-                group.addTask { await copilotService.refresh() }
+                if FeatureFlags.showGitHubSettings {
+                    group.addTask { await copilotService.refresh() }
+                }
             }
         }
     }

@@ -49,6 +49,16 @@ Or run the scripts directly:
 
 Open **Settings** from the dashboard popover (gear icon).
 
+### Feature flags
+
+GitHub Copilot settings and usage are hidden by default. To enable them for your local build, copy `.env.example` to `.env` and set:
+
+```bash
+SHOW_GITHUB_SETTINGS=true
+```
+
+Then rebuild (`make install-dev` or **Cmd+R** in Xcode). Builds without this flag omit the GitHub Copilot section from Settings and the dashboard.
+
 ### Cursor
 
 1. Open the **Cursor** tab and sign in via the embedded WebView.

@@ -17,3 +17,6 @@ Package.resolved
 *.har
 node_modules/
 electron-vault/
+
+# Local build configuration
+.env
