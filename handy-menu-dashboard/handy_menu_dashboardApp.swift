@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct handy_menu_dashboardApp: App {
+struct HandyMenuDashboardApp: App {
     @State private var cursorService = CursorService()
     @State private var copilotService = CopilotService()
 

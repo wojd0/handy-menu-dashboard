@@ -31,5 +31,6 @@ identifier_name:
     warning: 2
   excluded:
     - id
+    - user_id
 
 reporter: xcode
