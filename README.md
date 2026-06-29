@@ -56,3 +56,7 @@ This is mostly vibe-coded so don't bother writing any PRs, I'll prompt it myself
 ## License
 
 [Apache License 2.0](LICENSE)
+
+*System check weapons. Initiate HMD visor.*
+<img width="640" height="360" alt="Battlefield 3_ Campaign_Going_Hunting" src="https://github.com/user-attachments/assets/af445b68-ca83-4ac6-9b6a-f08505113d0a" />
+
