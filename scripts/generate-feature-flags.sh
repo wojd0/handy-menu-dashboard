@@ -10,12 +10,6 @@ if [[ -n "${SHOW_GITHUB_SETTINGS+x}" ]]; then
   github_override_value="$SHOW_GITHUB_SETTINGS"
 fi
 
-had_claude_override=false
-if [[ -n "${SHOW_CLAUDE_SETTINGS+x}" ]]; then
-  had_claude_override=true
-  claude_override_value="$SHOW_CLAUDE_SETTINGS"
-fi
-
 if [[ -f "$ROOT/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -27,12 +21,7 @@ if $had_github_override; then
   SHOW_GITHUB_SETTINGS="$github_override_value"
 fi
 
-if $had_claude_override; then
-  SHOW_CLAUDE_SETTINGS="$claude_override_value"
-fi
-
 SHOW_GITHUB_SETTINGS="${SHOW_GITHUB_SETTINGS:-false}"
-SHOW_CLAUDE_SETTINGS="${SHOW_CLAUDE_SETTINGS:-false}"
 
 is_enabled() {
   case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
@@ -47,15 +36,8 @@ else
   github_enabled="false"
 fi
 
-if is_enabled "$SHOW_CLAUDE_SETTINGS"; then
-  claude_enabled="true"
-else
-  claude_enabled="false"
-fi
-
 cat >"$OUTPUT" <<EOF
 enum GeneratedFeatureFlags {
     static let showGitHubSettings = $github_enabled
-    static let showClaudeSettings = $claude_enabled
 }
 EOF

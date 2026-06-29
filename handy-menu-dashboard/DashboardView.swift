@@ -58,9 +58,7 @@ struct DashboardView: View {
                 if FeatureFlags.showGitHubSettings {
                     group.addTask { await copilotService.refresh() }
                 }
-                if FeatureFlags.showClaudeSettings {
-                    group.addTask { await claudeService.refresh() }
-                }
+                group.addTask { await claudeService.refresh() }
             }
         }
     }
