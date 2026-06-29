@@ -41,9 +41,10 @@ struct CursorWebView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
+        config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.customUserAgent = CursorService.browserUserAgent
         webView.load(URLRequest(url: URL(string: "https://www.cursor.com/settings")!))
         return webView
     }

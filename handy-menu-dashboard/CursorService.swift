@@ -17,6 +17,10 @@ final class CursorService {
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
 
+    static let browserUserAgent =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
+
     var spendFormatted: String {
         UsageMath.formatCentsAsDollars(spendCents)
     }
@@ -59,6 +63,7 @@ final class CursorService {
 
     func clearCredentials() {
         keychain.delete(key: .cursorCookies)
+        WebAuthSession.clearCookies(matching: "cursor.com")
         cookieHeader = nil
         userEmail = nil
         isAuthenticated = false
@@ -203,11 +208,7 @@ final class CursorService {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = method
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-                + "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-            forHTTPHeaderField: "User-Agent"
-        )
+        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

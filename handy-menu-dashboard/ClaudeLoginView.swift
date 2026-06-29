@@ -41,10 +41,10 @@ struct ClaudeWebView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
+        config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        webView.customUserAgent = ClaudeService.chromeUserAgent
+        webView.customUserAgent = ClaudeService.browserUserAgent
         webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
         return webView
     }

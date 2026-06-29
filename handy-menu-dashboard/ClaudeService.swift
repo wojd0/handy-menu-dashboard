@@ -36,9 +36,9 @@ final class ClaudeService {
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
 
-    static let chromeUserAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        + "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    static let browserUserAgent =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
 
     var combinedUsedDollars: Double { spendUsedDollars + creditUsedDollars }
     var combinedLimitDollars: Double { spendLimitDollars + creditLimitDollars }
@@ -98,6 +98,7 @@ final class ClaudeService {
 
     func clearCredentials() {
         keychain.delete(key: .claudeCookies)
+        WebAuthSession.clearCookies(matching: "claude.ai")
         cookieHeader = nil
         isAuthenticated = false
         spendUsedDollars = 0
@@ -190,7 +191,7 @@ final class ClaudeService {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "GET"
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue(Self.chromeUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("web_claude_ai", forHTTPHeaderField: "anthropic-client-platform")
 
         let (data, response): (Data, URLResponse)
