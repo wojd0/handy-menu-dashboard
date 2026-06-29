@@ -30,32 +30,50 @@ struct MenuBarLabel: View {
     @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
     @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
+    @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
-        let cursorText = cursorShowPercent ? cursorService.menuBarPercentFragment : cursorService.menuBarFragment
-        let copilotText = copilotShowPercent ? copilotService.menuBarPercentFragment : copilotService.menuBarFragment
-        let claudeText = claudeService.menuBarFragment(baseline: claudeBaseline, showPercent: claudeShowPercent)
-        let hasCursor = !cursorText.isEmpty
-        let hasCopilot = !copilotText.isEmpty
-        let hasClaude = !claudeText.isEmpty
+        let lines = Provider.ordered(from: providerOrderRaw)
+            .map(fragment(for:))
+            .filter { !$0.isEmpty }
 
-        if hasCursor || hasCopilot || hasClaude {
-            VStack(alignment: .leading, spacing: 0) {
-                if hasCursor {
-                    Text(cursorText)
-                }
-                if hasCopilot {
-                    Text(copilotText)
-                }
-                if hasClaude {
-                    Text(claudeText)
-                }
-            }
-            .font(.caption2)
-            .monospacedDigit()
+        if let image = renderImage(lines: lines) {
+            Image(nsImage: image)
         } else {
             Text("Usage")
                 .font(.caption2)
         }
+    }
+
+    private func fragment(for provider: Provider) -> String {
+        switch provider {
+        case .cursor:
+            cursorShowPercent ? cursorService.menuBarPercentFragment : cursorService.menuBarFragment
+        case .copilot:
+            copilotShowPercent ? copilotService.menuBarPercentFragment : copilotService.menuBarFragment
+        case .claude:
+            claudeService.menuBarFragment(baseline: claudeBaseline, showPercent: claudeShowPercent)
+        }
+    }
+
+    private func renderImage(lines: [String]) -> NSImage? {
+        guard !lines.isEmpty else { return nil }
+
+        let fontSize = min(11, 21 / CGFloat(lines.count))
+        let renderer = ImageRenderer(content:
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(lines, id: \.self) { line in
+                    Text(line)
+                }
+            }
+            .font(.system(size: fontSize))
+            .monospacedDigit()
+        )
+        renderer.scale = displayScale
+
+        guard let image = renderer.nsImage else { return nil }
+        image.isTemplate = true
+        return image
     }
 }

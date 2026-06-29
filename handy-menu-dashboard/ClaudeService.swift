@@ -10,8 +10,8 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .usageLimit: "Limit"
-        case .credit: "Credit"
+        case .usageLimit: "General"
+        case .credit: "Code and Cowork"
         case .combined: "Combined"
         }
     }
@@ -76,7 +76,7 @@ final class ClaudeService {
         case .credit:
             return UsageMath.claudeDollarsFragment(used: creditUsedDollars, limit: creditLimitDollars)
         case .combined:
-            return UsageMath.claudeRemainingFragment(combinedRemainingDollars)
+            return UsageMath.claudeCombinedFragment(remaining: combinedRemainingDollars, total: combinedLimitDollars)
         }
     }
 

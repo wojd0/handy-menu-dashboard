@@ -5,58 +5,13 @@ struct DashboardView: View {
     var copilotService: CopilotService
     var claudeService: ClaudeService
     @Environment(\.openWindow) private var openWindow
-    @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
+    @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
 
     var body: some View {
+        let activeProviders = Provider.ordered(from: providerOrderRaw).filter(isActive)
+
         VStack(alignment: .leading, spacing: 16) {
-            if cursorService.isActive || copilotService.isActive || claudeService.isActive {
-                if cursorService.isActive {
-                    UsageCardView(
-                        serviceName: "Cursor",
-                        percentUsed: cursorService.spendPercentUsed,
-                        detailText: "\(cursorService.spendFormatted) / \(cursorService.limitFormatted)",
-                        subtitle: cursorService.userName,
-                        isOverLimit: cursorService.spendPercentUsed > 100,
-                        isLoading: cursorService.isLoading,
-                        error: cursorService.error,
-                        onRefresh: { Task { await cursorService.refresh() } }
-                    )
-                }
-
-                if cursorService.isActive && copilotService.isActive {
-                    Divider()
-                }
-
-                if copilotService.isActive {
-                    UsageCardView(
-                        serviceName: "GitHub Copilot",
-                        percentUsed: copilotService.percentUsed,
-                        detailText: "\(copilotService.totalUsed) / \(copilotService.monthlyEntitlement) premium requests",
-                        subtitle: nil,
-                        isOverLimit: copilotService.isOverLimit,
-                        isLoading: copilotService.isLoading,
-                        error: copilotService.error,
-                        onRefresh: { Task { await copilotService.refresh() } }
-                    )
-                }
-
-                if (cursorService.isActive || copilotService.isActive) && claudeService.isActive {
-                    Divider()
-                }
-
-                if claudeService.isActive {
-                    UsageCardView(
-                        serviceName: "Claude",
-                        percentUsed: claudeService.percentUsed(for: claudeBaseline),
-                        detailText: claudeService.detailText(for: claudeBaseline),
-                        subtitle: nil,
-                        isOverLimit: claudeService.percentUsed(for: claudeBaseline) > 100,
-                        isLoading: claudeService.isLoading,
-                        error: claudeService.error,
-                        onRefresh: { Task { await claudeService.refresh() } }
-                    )
-                }
-            } else {
+            if activeProviders.isEmpty {
                 VStack(spacing: 8) {
                     Text("No services configured")
                         .font(.headline)
@@ -67,6 +22,13 @@ struct DashboardView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
+            } else {
+                ForEach(Array(activeProviders.enumerated()), id: \.element) { index, provider in
+                    if index > 0 {
+                        Divider()
+                    }
+                    card(for: provider)
+                }
             }
 
             Divider()
@@ -100,6 +62,44 @@ struct DashboardView: View {
                     group.addTask { await claudeService.refresh() }
                 }
             }
+        }
+    }
+
+    private func isActive(_ provider: Provider) -> Bool {
+        switch provider {
+        case .cursor: cursorService.isActive
+        case .copilot: copilotService.isActive
+        case .claude: claudeService.isActive
+        }
+    }
+
+    @ViewBuilder
+    private func card(for provider: Provider) -> some View {
+        switch provider {
+        case .cursor:
+            UsageCardView(
+                serviceName: "Cursor",
+                percentUsed: cursorService.spendPercentUsed,
+                detailText: "\(cursorService.spendFormatted) / \(cursorService.limitFormatted)",
+                subtitle: cursorService.userName,
+                isOverLimit: cursorService.spendPercentUsed > 100,
+                isLoading: cursorService.isLoading,
+                error: cursorService.error,
+                onRefresh: { Task { await cursorService.refresh() } }
+            )
+        case .copilot:
+            UsageCardView(
+                serviceName: "GitHub Copilot",
+                percentUsed: copilotService.percentUsed,
+                detailText: "\(copilotService.totalUsed) / \(copilotService.monthlyEntitlement) premium requests",
+                subtitle: nil,
+                isOverLimit: copilotService.isOverLimit,
+                isLoading: copilotService.isLoading,
+                error: copilotService.error,
+                onRefresh: { Task { await copilotService.refresh() } }
+            )
+        case .claude:
+            ClaudeUsageCardView(claudeService: claudeService)
         }
     }
 

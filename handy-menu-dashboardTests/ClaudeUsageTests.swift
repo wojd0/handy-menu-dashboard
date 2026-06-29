@@ -86,15 +86,16 @@ struct ClaudeUsageTests {
         #expect(service.menuBarFragment(baseline: .credit, showPercent: false) == "$10/1000")
     }
 
-    @Test func menuBarFragmentDollarsCombinedShowsRemaining() {
+    @Test func menuBarFragmentDollarsCombinedShowsRemainingAndTotal() {
         let service = makeService(authenticated: true)
         service.spendUsedDollars = 2.39
         service.spendLimitDollars = 3000
         service.creditUsedDollars = 10.5
         service.creditLimitDollars = 1000
 
-        let remaining = (3000 + 1000) - (2.39 + 10.5)
-        let expected = "$\(Int(remaining))"
+        let total = 3000.0 + 1000.0
+        let remaining = total - (2.39 + 10.5)
+        let expected = "$\(Int(remaining))/\(Int(total))"
         #expect(service.menuBarFragment(baseline: .combined, showPercent: false) == expected)
     }
 
