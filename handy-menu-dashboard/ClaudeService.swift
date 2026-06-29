@@ -76,7 +76,7 @@ final class ClaudeService {
         case .credit:
             return UsageMath.claudeDollarsFragment(used: creditUsedDollars, limit: creditLimitDollars)
         case .combined:
-            return UsageMath.claudeCombinedFragment(remaining: combinedRemainingDollars, total: combinedLimitDollars)
+            return UsageMath.claudeDollarsFragment(used: combinedUsedDollars, limit: combinedLimitDollars)
         }
     }
 

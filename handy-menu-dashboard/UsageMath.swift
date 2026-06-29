@@ -54,9 +54,6 @@ enum UsageMath {
         "$\(Int(used))/\(Int(limit))"
     }
 
-    static func claudeCombinedFragment(remaining: Double, total: Double) -> String {
-        "$\(Int(remaining))/\(Int(total))"
-    }
 }
 
 struct ClaudeUsageResponse: Decodable {

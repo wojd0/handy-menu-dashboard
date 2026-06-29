@@ -50,7 +50,7 @@ struct SettingsView: View {
         }
         .animation(.snappy, value: providerOrderRaw)
         .padding(20)
-        .frame(width: 380)
+        .frame(width: 460)
         .sheet(isPresented: $showCursorLogin) {
             CursorLoginView(cursorService: cursorService)
         }
@@ -285,7 +285,6 @@ struct SettingsView: View {
                 HStack {
                     Text("Baseline")
                         .font(.callout)
-                    Spacer()
                     Picker("", selection: $claudeBaseline) {
                         ForEach(ClaudeBaseline.allCases) { baseline in
                             Text(baseline.label).tag(baseline)
@@ -293,7 +292,6 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    .fixedSize()
                 }
 
                 HStack {
