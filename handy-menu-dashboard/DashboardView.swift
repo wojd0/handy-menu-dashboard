@@ -3,11 +3,13 @@ import SwiftUI
 struct DashboardView: View {
     var cursorService: CursorService
     var copilotService: CopilotService
+    var claudeService: ClaudeService
     @Environment(\.openWindow) private var openWindow
+    @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if cursorService.isActive || copilotService.isActive {
+            if cursorService.isActive || copilotService.isActive || claudeService.isActive {
                 if cursorService.isActive {
                     UsageCardView(
                         serviceName: "Cursor",
@@ -35,6 +37,23 @@ struct DashboardView: View {
                         isLoading: copilotService.isLoading,
                         error: copilotService.error,
                         onRefresh: { Task { await copilotService.refresh() } }
+                    )
+                }
+
+                if (cursorService.isActive || copilotService.isActive) && claudeService.isActive {
+                    Divider()
+                }
+
+                if claudeService.isActive {
+                    UsageCardView(
+                        serviceName: "Claude",
+                        percentUsed: claudeService.percentUsed(for: claudeBaseline),
+                        detailText: claudeService.detailText(for: claudeBaseline),
+                        subtitle: nil,
+                        isOverLimit: claudeService.percentUsed(for: claudeBaseline) > 100,
+                        isLoading: claudeService.isLoading,
+                        error: claudeService.error,
+                        onRefresh: { Task { await claudeService.refresh() } }
                     )
                 }
             } else {
@@ -76,6 +95,9 @@ struct DashboardView: View {
                 group.addTask { await cursorService.refresh() }
                 if FeatureFlags.showGitHubSettings {
                     group.addTask { await copilotService.refresh() }
+                }
+                if FeatureFlags.showClaudeSettings {
+                    group.addTask { await claudeService.refresh() }
                 }
             }
         }

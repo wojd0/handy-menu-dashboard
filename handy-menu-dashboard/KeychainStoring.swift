@@ -5,6 +5,7 @@ enum KeychainKey: String {
     case copilotPAT = "com.wojd0.dashboard.copilotPAT"
     case copilotUsername = "com.wojd0.dashboard.copilotUsername"
     case copilotEntitlement = "com.wojd0.dashboard.copilotEntitlement"
+    case claudeCookies = "com.wojd0.dashboard.claudeCookies"
 }
 
 protocol KeychainStoring {
