@@ -54,8 +54,8 @@ enum UsageMath {
         "$\(Int(used))/\(Int(limit))"
     }
 
-    static func claudeRemainingFragment(_ remaining: Double) -> String {
-        "$\(Int(remaining))"
+    static func claudeCombinedFragment(remaining: Double, total: Double) -> String {
+        "$\(Int(remaining))/\(Int(total))"
     }
 }
 
