@@ -11,7 +11,6 @@ APP_BUNDLE="$APP_NAME.app"
 DERIVED_DATA="$ROOT/build/DerivedData"
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/$APP_BUNDLE"
 INSTALL_DIRS=(
-  "/Applications"
   "$HOME/Applications"
 )
 
@@ -48,4 +47,11 @@ for applications_dir in "${INSTALL_DIRS[@]}"; do
   echo "Installed $APP_BUNDLE to $applications_dir"
 done
 
+if pgrep -x "$APP_NAME" > /dev/null; then
+  echo "Stopping running instance of $APP_NAME..."
+  pkill -x "$APP_NAME"
+  sleep 1
+fi
+
 open -a "${INSTALL_DIRS[0]}/$APP_BUNDLE"
+echo "Launched $APP_BUNDLE"

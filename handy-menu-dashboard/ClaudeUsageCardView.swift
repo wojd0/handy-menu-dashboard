@@ -58,13 +58,13 @@ struct ClaudeUsageCardView: View {
         return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
                 Text("\(Int(percent))%")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(isOverLimit ? .red : .primary)
 
