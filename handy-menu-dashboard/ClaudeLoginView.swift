@@ -76,20 +76,15 @@ struct ClaudeWebView: NSViewRepresentable {
 
         private func extractCookiesIfNeeded(from webView: WKWebView) {
             guard !hasExtracted else { return }
-            guard let url = webView.url, url.host?.contains("claude.ai") == true else { return }
-
-            let isPostLogin = !url.path.contains("/login")
-            guard isPostLogin else { return }
+            guard webView.url?.host?.contains("claude.ai") == true else { return }
 
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
                 guard let self, !self.hasExtracted else { return }
                 let claudeCookies = cookies.filter { $0.domain.contains("claude.ai") }
-                let hasSession = claudeCookies.contains { $0.name == "sessionKey" }
-                if hasSession {
-                    self.hasExtracted = true
-                    Task { @MainActor in
-                        self.parent.onCookiesExtracted(claudeCookies)
-                    }
+                guard claudeCookies.contains(where: { $0.name == "sessionKey" }) else { return }
+                self.hasExtracted = true
+                Task { @MainActor in
+                    self.parent.onCookiesExtracted(claudeCookies)
                 }
             }
         }
