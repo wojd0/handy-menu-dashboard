@@ -17,7 +17,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         switch self {
         case .cursor: true
         case .copilot: FeatureFlags.showGitHubSettings
-        case .claude: FeatureFlags.showClaudeSettings
+        case .claude: true
         }
     }
 

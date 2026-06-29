@@ -7,7 +7,7 @@ cd "$ROOT"
 RESULT_BUNDLE="$ROOT/build/TestResults.xcresult"
 rm -rf "$RESULT_BUNDLE"
 
-SHOW_GITHUB_SETTINGS=true SHOW_CLAUDE_SETTINGS=true xcodebuild \
+SHOW_GITHUB_SETTINGS=true xcodebuild \
   -project "handy-menu-dashboard.xcodeproj" \
   -scheme "handy-menu-dashboard" \
   -configuration Debug \

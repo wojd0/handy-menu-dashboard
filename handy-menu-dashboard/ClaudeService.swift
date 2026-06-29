@@ -44,7 +44,7 @@ final class ClaudeService {
     var combinedLimitDollars: Double { spendLimitDollars + creditLimitDollars }
     var combinedRemainingDollars: Double { combinedLimitDollars - combinedUsedDollars }
 
-    var isActive: Bool { FeatureFlags.showClaudeSettings && isAuthenticated && isEnabled }
+    var isActive: Bool { isAuthenticated && isEnabled }
 
     func percentUsed(for baseline: ClaudeBaseline) -> Double {
         switch baseline {
