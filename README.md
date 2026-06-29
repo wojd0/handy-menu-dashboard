@@ -3,14 +3,15 @@
 [![CI](https://github.com/wojd0/handy-menu-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/wojd0/handy-menu-dashboard/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A macOS menu bar app that tracks coding-agent usage at a glance: Cursor team spend and GitHub Copilot premium requests.
+A macOS menu bar app that tracks coding-agent usage at a glance.
 
 ## Features
 
-- **Cursor** — Shows your current billing-period spend against your team per-user monthly limit, fetched from Cursor dashboard APIs.
-- **Menu bar summary** — Compact `$spent/limit` or percentage labels (toggle to percent view in settings).
-- **Secure credentials** — Session cookies and PATs are stored in the macOS Keychain; the app runs sandboxed with outbound network only.
-- **GitHub Copilot** — Tracks premium request usage for the current month against a configurable entitlement. (not yet implemented)
+- **Cursor** — Current billing-period spend against your team per-user monthly limit.
+- **Claude** — Claude.ai usage across two pools: usage limit (General) and Claude Code & Cowork credit. Pick a baseline (General / Code and Cowork / Combined) and dollars or percent.
+- **GitHub Copilot** — Premium request usage for the month against a configurable entitlement (feature flagged for now).
+- **Menu bar summary** — Compact per-service labels; drag to reorder, toggle dollars/percent per service.
+- **Secure & sandboxed** — Cookies and PATs live in the macOS Keychain; outbound network only.
 
 ## Requirements
 
@@ -19,68 +20,38 @@ A macOS menu bar app that tracks coding-agent usage at a glance: Cursor team spe
 
 ## Build and run
 
-### Xcode
+In Xcode, open `handy-menu-dashboard.xcodeproj`, select the **handy-menu-dashboard** scheme, and press **Cmd+R**.
 
-```bash
-open handy-menu-dashboard.xcodeproj
-```
-
-Select the **handy-menu-dashboard** scheme and press **Cmd+R**.
-
-### Command line
+Or from the command line:
 
 ```bash
 make build        # Release build (unsigned)
-make install-dev  # Build and replace the app in /Applications and ~/Applications
-make test         # Run unit tests (unsigned)
+make install      # Build and install to ~/Applications (prompts to replace)
+make install-dev  # Build and install to /Applications and ~/Applications
+make test         # Run unit tests
 make lint         # SwiftLint (optional, advisory)
-```
-
-Or run the scripts directly:
-
-```bash
-./build.sh
-./install-dev.sh
-./test.sh
-./lint.sh
 ```
 
 ## Configuration
 
-Open **Settings** from the dashboard popover (gear icon).
+Open **Settings** from the dashboard popover (gear icon). Each service has its own login/credentials, an **Enabled** toggle, and a dollars/percent switch.
 
-### Feature flags
+- **Cursor / Claude** — Sign in via the embedded WebView; cookies are saved to Keychain. Claude also lets you pick a baseline (General / Code and Cowork / Combined).
+- **GitHub Copilot** — Enter your username and a [fine-grained PAT](https://github.com/settings/tokens?type=beta) with read access to **Account** billing/usage, plus a monthly entitlement (default **300**).
 
-GitHub Copilot settings and usage are hidden by default. To enable them for your local build, copy `.env.example` to `.env` and set:
-
-```bash
-SHOW_GITHUB_SETTINGS=true
-```
-
-Then rebuild (`make install-dev` or **Cmd+R** in Xcode). Builds without this flag omit the GitHub Copilot section from Settings and the dashboard.
-
-### Cursor
-
-1. Open the **Cursor** tab and sign in via the embedded WebView.
-2. After login, session cookies are saved to Keychain and used for API calls.
-3. Toggle **Enabled** to include or exclude Cursor from the menu bar and refresh loop.
-
-### GitHub Copilot
-
-1. Create a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) with read access to **Account** (billing/usage).
-2. Enter your GitHub username and PAT on the **Copilot** tab.
-3. Set your monthly premium-request entitlement (default **300**).
-4. Toggle **Enabled** to include or exclude Copilot from the menu bar.
+GitHub Copilot is hidden by default — to enable it locally, copy `.env.example` to `.env`, set `SHOW_GITHUB_SETTINGS=true`, and rebuild. See [CLAUDE.md](CLAUDE.md) for details.
 
 ## Security
 
-- Credentials never leave your machine except in authenticated HTTPS calls to Cursor and GitHub.
-- Keychain keys are prefixed with `com.wojd0.dashboard.*`.
-- App Sandbox is enabled with `com.apple.security.network.client` only.
+Sign-in happens in an embedded WebView that loads the provider's own login page — you authenticate directly with the provider, and the app never sees your username or password. After login, it reads only that provider's session cookies from the WebView and stores them in the Keychain.
+
+Credentials never leave your machine except in authenticated HTTPS calls to providers. Keychain keys are prefixed `com.wojd0.dashboard.*`, and the App Sandbox allows `com.apple.security.network.client` only.
 
 ## Contributing
 
-Issues and pull requests are welcome on [GitHub](https://github.com/wojd0/handy-menu-dashboard).
+Issues are welcome on [GitHub](https://github.com/wojd0/handy-menu-dashboard).
+
+This is mostly vibe-coded so don't bother writing any PRs, I'll prompt it myself ;P.
 
 ## License
 
