@@ -36,6 +36,51 @@ enum UsageMath {
         let total = events.reduce(0.0) { $0 + ($1.chargedCents ?? 0) }
         return Int(total.rounded())
     }
+
+    static func percentUsed(used: Double, limit: Double) -> Double {
+        guard limit > 0 else { return 0 }
+        return used / limit * 100
+    }
+
+    static func dollars(amountMinor: Int, exponent: Int) -> Double {
+        Double(amountMinor) / pow(10.0, Double(exponent))
+    }
+
+    static func formatDollars(_ value: Double) -> String {
+        String(format: "$%.2f", value)
+    }
+
+    static func claudeDollarsFragment(used: Double, limit: Double) -> String {
+        "$\(Int(used))/\(Int(limit))"
+    }
+
+    static func claudeRemainingFragment(_ remaining: Double) -> String {
+        "$\(Int(remaining))"
+    }
+}
+
+struct ClaudeUsageResponse: Decodable {
+    struct Money: Decodable {
+        let amountMinor: Int
+        let exponent: Int
+    }
+
+    struct Spend: Decodable {
+        let used: Money?
+        let limit: Money?
+        let enabled: Bool?
+    }
+
+    struct CreditPool: Decodable {
+        let utilization: Double?
+        let limitDollars: Double?
+        let usedDollars: Double?
+        let remainingDollars: Double?
+        let resetsAt: String?
+    }
+
+    let spend: Spend?
+    let cinderCove: CreditPool?
 }
 
 struct FilteredUsageEventsResponse: Decodable {

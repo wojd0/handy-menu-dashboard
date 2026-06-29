@@ -4,10 +4,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT="$ROOT/handy-menu-dashboard/FeatureFlags+Generated.swift"
 
-had_override=false
+had_github_override=false
 if [[ -n "${SHOW_GITHUB_SETTINGS+x}" ]]; then
-  had_override=true
-  override_value="$SHOW_GITHUB_SETTINGS"
+  had_github_override=true
+  github_override_value="$SHOW_GITHUB_SETTINGS"
+fi
+
+had_claude_override=false
+if [[ -n "${SHOW_CLAUDE_SETTINGS+x}" ]]; then
+  had_claude_override=true
+  claude_override_value="$SHOW_CLAUDE_SETTINGS"
 fi
 
 if [[ -f "$ROOT/.env" ]]; then
@@ -17,11 +23,16 @@ if [[ -f "$ROOT/.env" ]]; then
   set +a
 fi
 
-if $had_override; then
-  SHOW_GITHUB_SETTINGS="$override_value"
+if $had_github_override; then
+  SHOW_GITHUB_SETTINGS="$github_override_value"
+fi
+
+if $had_claude_override; then
+  SHOW_CLAUDE_SETTINGS="$claude_override_value"
 fi
 
 SHOW_GITHUB_SETTINGS="${SHOW_GITHUB_SETTINGS:-false}"
+SHOW_CLAUDE_SETTINGS="${SHOW_CLAUDE_SETTINGS:-false}"
 
 is_enabled() {
   case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
@@ -31,13 +42,20 @@ is_enabled() {
 }
 
 if is_enabled "$SHOW_GITHUB_SETTINGS"; then
-  enabled="true"
+  github_enabled="true"
 else
-  enabled="false"
+  github_enabled="false"
+fi
+
+if is_enabled "$SHOW_CLAUDE_SETTINGS"; then
+  claude_enabled="true"
+else
+  claude_enabled="false"
 fi
 
 cat >"$OUTPUT" <<EOF
 enum GeneratedFeatureFlags {
-    static let showGitHubSettings = $enabled
+    static let showGitHubSettings = $github_enabled
+    static let showClaudeSettings = $claude_enabled
 }
 EOF

@@ -3,11 +3,16 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var cursorService: CursorService
     @Bindable var copilotService: CopilotService
+    @Bindable var claudeService: ClaudeService
     @State private var showCursorLogin = false
+    @State private var showClaudeLogin = false
     @State private var githubUsername = ""
     @State private var githubPAT = ""
     @State private var copilotEntitlement = ""
-    @AppStorage("menuBarShowPercent") private var showPercent = false
+    @AppStorage("cursorMenuBarShowPercent") private var cursorShowPercent = false
+    @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
+    @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
+    @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
     private let fineGrainedPATURL = URL(
         string: "https://github.com/settings/personal-access-tokens/new?"
             + "description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read"
@@ -15,10 +20,12 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            displaySection
             cursorSection
             if FeatureFlags.showGitHubSettings {
                 copilotSection
+            }
+            if FeatureFlags.showClaudeSettings {
+                claudeSection
             }
         }
         .padding(20)
@@ -26,28 +33,13 @@ struct SettingsView: View {
         .sheet(isPresented: $showCursorLogin) {
             CursorLoginView(cursorService: cursorService)
         }
+        .sheet(isPresented: $showClaudeLogin) {
+            ClaudeLoginView(claudeService: claudeService)
+        }
         .onAppear {
             githubUsername = copilotService.username
             copilotEntitlement = String(copilotService.monthlyEntitlement)
         }
-    }
-
-    private var displaySection: some View {
-        HStack {
-            Image(systemName: "menubar.rectangle")
-            Text("Menu Bar")
-                .font(.headline)
-            Spacer()
-            Picker("", selection: $showPercent) {
-                Text("Dollars").tag(false)
-                Text("Percent").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-        }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var cursorSection: some View {
@@ -74,6 +66,19 @@ struct SettingsView: View {
                     Button("Sign Out") { cursorService.clearCredentials() }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Menu Bar")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: $cursorShowPercent) {
+                        Text("Dollars").tag(false)
+                        Text("Percent").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
             } else {
                 Text("Sign in via browser to fetch your Cursor usage data.")
@@ -129,6 +134,19 @@ struct SettingsView: View {
                             }
                         }
                 }
+
+                HStack {
+                    Text("Menu Bar")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: $copilotShowPercent) {
+                        Text("Dollars").tag(false)
+                        Text("Percent").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
             } else {
                 TextField("GitHub Username", text: $githubUsername)
                     .textFieldStyle(.roundedBorder)
@@ -155,6 +173,70 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(16)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var claudeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "sparkle")
+                Text("Claude")
+                    .font(.headline)
+                Spacer()
+                if claudeService.isAuthenticated {
+                    Toggle("", isOn: $claudeService.isEnabled)
+                        .labelsHidden()
+                        .onChange(of: claudeService.isEnabled) { _, newValue in
+                            UserDefaults.standard.set(newValue, forKey: "claudeEnabled")
+                        }
+                }
+            }
+
+            if claudeService.isAuthenticated {
+                HStack {
+                    Label("Signed in", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Sign Out") { claudeService.clearCredentials() }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Baseline")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: $claudeBaseline) {
+                        ForEach(ClaudeBaseline.allCases) { baseline in
+                            Text(baseline.label).tag(baseline)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+
+                HStack {
+                    Text("Menu Bar")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: $claudeShowPercent) {
+                        Text("Dollars").tag(false)
+                        Text("Percent").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+            } else {
+                Text("Sign in via browser to fetch your Claude usage data.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Button("Sign in to Claude...") { showClaudeLogin = true }
+                    .buttonStyle(.borderedProminent)
             }
         }
         .padding(16)
