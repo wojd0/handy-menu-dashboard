@@ -1,7 +1,10 @@
-.PHONY: build install-dev test lint
+.PHONY: build install install-dev test lint
 
 build:
 	./build.sh
+
+install:
+	./install.sh
 
 install-dev:
 	./install-dev.sh
