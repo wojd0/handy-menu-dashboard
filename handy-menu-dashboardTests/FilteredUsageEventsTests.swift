@@ -2,59 +2,53 @@ import Foundation
 import Testing
 @testable import handy_menu_dashboard
 
-@Suite("Filtered usage events")
-struct FilteredUsageEventsTests {
-    @Test func decodesUsageEventsFromJSON() throws {
+@Suite("Cursor usage summary")
+struct CursorUsageSummaryTests {
+    @Test func decodesUsageSummaryFromJSON() throws {
         let json = """
         {
-          "totalUsageEventsCount": 2,
-          "usageEventsDisplay": [
-            { "chargedCents": 12.5 },
-            { "chargedCents": 7.25 }
-          ]
+          "billingCycleStart": "2026-07-01T00:00:00.000Z",
+          "billingCycleEnd": "2026-08-01T00:00:00.000Z",
+          "isUnlimited": false,
+          "individualUsage": {
+            "overall": {
+              "enabled": true,
+              "used": 5000,
+              "limit": 160000,
+              "remaining": 155000
+            }
+          }
         }
         """
         let data = Data(json.utf8)
 
-        let response = try JSONDecoder().decode(FilteredUsageEventsResponse.self, from: data)
+        let response = try JSONDecoder().decode(CursorUsageSummaryResponse.self, from: data)
 
-        #expect(response.totalUsageEventsCount == 2)
-        #expect(response.usageEventsDisplay.count == 2)
+        #expect(response.isUnlimited == false)
+        #expect(response.individualUsage?.overall?.used == 5000)
+        #expect(response.individualUsage?.overall?.limit == 160000)
+        #expect(response.individualUsage?.overall?.remaining == 155000)
     }
 
-    @Test func sumChargedCentsRoundsFractionalCents() {
-        let events = [
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 10.4),
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 20.6)
-        ]
-
-        #expect(UsageMath.sumChargedCents(from: events) == 31)
-    }
-
-    @Test func sumChargedCentsTreatsMissingValuesAsZero() {
-        let events = [
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 5),
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: nil),
-            FilteredUsageEventsResponse.UsageEvent(chargedCents: 2.75)
-        ]
-
-        #expect(UsageMath.sumChargedCents(from: events) == 8)
-    }
-
-    @Test func sumChargedCentsMatchesDecodedPayload() throws {
+    @Test func decodesNullLimitAsNil() throws {
         let json = """
         {
-          "totalUsageEventsCount": 3,
-          "usageEventsDisplay": [
-            { "chargedCents": 0.4 },
-            { "chargedCents": 0.4 },
-            { "chargedCents": 0.4 }
-          ]
+          "isUnlimited": true,
+          "individualUsage": {
+            "overall": {
+              "enabled": true,
+              "used": 0,
+              "limit": null,
+              "remaining": null
+            }
+          }
         }
         """
         let data = Data(json.utf8)
-        let response = try JSONDecoder().decode(FilteredUsageEventsResponse.self, from: data)
 
-        #expect(UsageMath.sumChargedCents(from: response.usageEventsDisplay) == 1)
+        let response = try JSONDecoder().decode(CursorUsageSummaryResponse.self, from: data)
+
+        #expect(response.isUnlimited == true)
+        #expect(response.individualUsage?.overall?.limit == nil)
     }
 }
