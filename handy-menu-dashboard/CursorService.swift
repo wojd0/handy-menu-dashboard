@@ -13,7 +13,6 @@ final class CursorService {
     var userName: String?
 
     private var cookieHeader: String?
-    private var userEmail: String?
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
 
@@ -65,7 +64,6 @@ final class CursorService {
         keychain.delete(key: .cursorCookies)
         WebAuthSession.clearCookies(matching: "cursor.com")
         cookieHeader = nil
-        userEmail = nil
         isAuthenticated = false
         spendCents = 0
         monthlyLimitDollars = 0
@@ -81,13 +79,17 @@ final class CursorService {
         defer { isLoading = false }
 
         do {
-            let email = try await verifiedUserEmail(cookie: cookieHeader)
-            let spend = try await fetchTeamSpend(cookie: cookieHeader)
+            let summary = try await fetchUsageSummary(cookie: cookieHeader)
+            isAuthenticated = true
 
-            if let myEntry = spend.teamMemberSpend.first(where: { $0.email.lowercased() == email.lowercased() }) {
-                monthlyLimitDollars = myEntry.effectivePerUserLimitDollars ?? myEntry.monthlyLimitDollars ?? 0
-                if userName == nil { userName = myEntry.name }
-                spendCents = try await resolvedSpendCents(for: myEntry, cookie: cookieHeader)
+            if let overall = summary.individualUsage?.overall {
+                spendCents = overall.used ?? 0
+                monthlyLimitDollars = (overall.limit ?? 0) / 100
+            }
+
+            if userName == nil {
+                let me = try await fetchMe(cookie: cookieHeader)
+                userName = me.name
             }
         } catch let error as ServiceError {
             handleServiceError(error)
@@ -96,125 +98,24 @@ final class CursorService {
         }
     }
 
+    private func fetchUsageSummary(cookie: String) async throws -> CursorUsageSummaryResponse {
+        let (data, _) = try await performRequest(url: "https://cursor.com/api/usage-summary", cookie: cookie)
+        return try JSONDecoder().decode(CursorUsageSummaryResponse.self, from: data)
+    }
+
     private func fetchMe(cookie: String) async throws -> AuthMeResponse {
         let (data, _) = try await performRequest(url: "https://www.cursor.com/api/auth/me", cookie: cookie)
         return try JSONDecoder().decode(AuthMeResponse.self, from: data)
     }
 
-    private func fetchTeamSpend(cookie: String) async throws -> TeamSpendResponse {
-        guard let teamId = extractCookieValue(named: "team_id", from: cookie) else {
-            throw ServiceError.invalidResponse
-        }
-        let body = ["teamId": Int(teamId) ?? 0] as [String: Any]
-        let jsonBody = try? JSONSerialization.data(withJSONObject: body)
-        let (data, _) = try await performRequest(
-            url: "https://cursor.com/api/dashboard/get-team-spend",
-            cookie: cookie,
-            method: "POST",
-            body: jsonBody
-        )
-        return try JSONDecoder().decode(TeamSpendResponse.self, from: data)
-    }
-
-    private func verifiedUserEmail(cookie: String) async throws -> String {
-        if userEmail == nil {
-            let me = try await fetchMe(cookie: cookie)
-            userEmail = me.email
-            userName = me.name
-        }
-
-        guard let email = userEmail else {
-            throw ServiceError.invalidResponse
-        }
-
-        isAuthenticated = true
-        return email
-    }
-
-    private func resolvedSpendCents(for member: TeamSpendResponse.TeamMember, cookie: String) async throws -> Int {
-        if let teamId = extractCookieValue(named: "team_id", from: cookie).flatMap({ Int($0) }),
-           let userId = member.resolvedUserId {
-            return try await fetchCurrentPeriodSpendCents(cookie: cookie, teamId: teamId, userId: userId)
-        }
-
-        return member.spendCents ?? member.overallSpendCents ?? 0
-    }
-
-    private func fetchCurrentPeriodSpendCents(cookie: String, teamId: Int, userId: Int) async throws -> Int {
-        let (startDate, endDate) = currentPeriodRangeMilliseconds()
-        let pageSize = 1000
-        var page = 1
-        var totalCents = 0.0
-
-        while true {
-            let body: [String: Any] = [
-                "teamId": teamId,
-                "startDate": startDate,
-                "endDate": endDate,
-                "userId": userId,
-                "page": page,
-                "pageSize": pageSize
-            ]
-            let jsonBody = try? JSONSerialization.data(withJSONObject: body)
-            let (data, _) = try await performRequest(
-                url: "https://cursor.com/api/dashboard/get-filtered-usage-events",
-                cookie: cookie,
-                method: "POST",
-                body: jsonBody
-            )
-            let response = try JSONDecoder().decode(FilteredUsageEventsResponse.self, from: data)
-
-            totalCents += response.usageEventsDisplay.reduce(0.0) { $0 + ($1.chargedCents ?? 0) }
-
-            if response.usageEventsDisplay.isEmpty || page * pageSize >= response.totalUsageEventsCount {
-                break
-            }
-            page += 1
-        }
-
-        return Int(totalCents.rounded())
-    }
-
-    private func currentPeriodRangeMilliseconds() -> (start: String, end: String) {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-
-        let now = Date()
-        let monthComponents = calendar.dateComponents([.year, .month], from: now)
-        let startOfMonth = calendar.date(from: monthComponents) ?? now
-
-        let startMs = Int64(startOfMonth.timeIntervalSince1970 * 1000)
-        let endMs = Int64(now.timeIntervalSince1970 * 1000)
-
-        return (String(startMs), String(endMs))
-    }
-
-    private func extractCookieValue(named name: String, from cookieHeader: String) -> String? {
-        for pair in cookieHeader.components(separatedBy: "; ") {
-            let parts = pair.split(separator: "=", maxSplits: 1)
-            if parts.count == 2 && parts[0] == name {
-                return String(parts[1])
-            }
-        }
-        return nil
-    }
-
     private func performRequest(
         url: String,
-        cookie: String,
-        method: String = "GET",
-        body: Data? = nil
+        cookie: String
     ) async throws(ServiceError) -> (Data, URLResponse) {
         var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = method
+        request.httpMethod = "GET"
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
         request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
-        if let body {
-            request.httpBody = body
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("https://cursor.com", forHTTPHeaderField: "Origin")
-            request.setValue("https://cursor.com/dashboard/usage", forHTTPHeaderField: "Referer")
-        }
 
         let (data, response): (Data, URLResponse)
         do {
