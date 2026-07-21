@@ -5,9 +5,10 @@ struct HandyMenuDashboardApp: App {
     @State private var cursorService = CursorService()
     @State private var copilotService = CopilotService()
     @State private var claudeService = ClaudeService()
+    @AppStorage("menuBarInserted") private var menuBarInserted = true
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $menuBarInserted) {
             DashboardView(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)
         } label: {
             MenuBarLabel(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)

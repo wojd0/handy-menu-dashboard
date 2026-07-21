@@ -1,3 +1,4 @@
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -20,6 +21,8 @@ struct SettingsView: View {
     @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
+    @AppStorage("menuBarInserted") private var menuBarInserted = true
+    @State private var launchAtLogin = false
     @State private var draggedProvider: Provider?
     @State private var dropIndicator: DropIndicator?
     @State private var cardHeights: [Provider: CGFloat] = [:]
@@ -47,6 +50,8 @@ struct SettingsView: View {
                         )
                     )
             }
+
+            generalSection
         }
         .animation(.snappy, value: providerOrderRaw)
         .padding(20)
@@ -60,7 +65,49 @@ struct SettingsView: View {
         .onAppear {
             githubUsername = copilotService.username
             copilotEntitlement = String(copilotService.monthlyEntitlement)
+            launchAtLogin = SMAppService.mainApp.status == .enabled
         }
+        .onChange(of: launchAtLogin) { _, newValue in
+            let previousValue = !newValue
+            do {
+                if newValue {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {
+                launchAtLogin = previousValue
+            }
+        }
+    }
+
+    private var generalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "gearshape")
+                Text("General")
+                    .font(.headline)
+            }
+
+            Toggle("Launch at Login", isOn: $launchAtLogin)
+
+            HStack {
+                if menuBarInserted {
+                    Label("In menu bar", systemImage: "checkmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.green)
+                } else {
+                    Text("Icon removed from menu bar")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Add to Menu Bar") { menuBarInserted = true }
+                    .disabled(menuBarInserted)
+            }
+        }
+        .padding(16)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
     @ViewBuilder
