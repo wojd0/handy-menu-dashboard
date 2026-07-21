@@ -90,6 +90,7 @@ struct SettingsView: View {
             }
 
             Toggle("Launch at Login", isOn: $launchAtLogin)
+                .toggleStyle(.switch)
 
             HStack {
                 if menuBarInserted {
@@ -173,6 +174,7 @@ struct SettingsView: View {
                 Spacer()
                 if cursorService.isAuthenticated {
                     Toggle("", isOn: $cursorService.isEnabled)
+                        .toggleStyle(.switch)
                         .labelsHidden()
                         .onChange(of: cursorService.isEnabled) { _, newValue in
                             UserDefaults.standard.set(newValue, forKey: "cursorEnabled")
@@ -224,6 +226,7 @@ struct SettingsView: View {
                 Spacer()
                 if copilotService.isAuthenticated {
                     Toggle("", isOn: $copilotService.isEnabled)
+                        .toggleStyle(.switch)
                         .labelsHidden()
                         .onChange(of: copilotService.isEnabled) { _, newValue in
                             UserDefaults.standard.set(newValue, forKey: "copilotEnabled")
@@ -312,6 +315,7 @@ struct SettingsView: View {
                 Spacer()
                 if claudeService.isAuthenticated {
                     Toggle("", isOn: $claudeService.isEnabled)
+                        .toggleStyle(.switch)
                         .labelsHidden()
                         .onChange(of: claudeService.isEnabled) { _, newValue in
                             UserDefaults.standard.set(newValue, forKey: "claudeEnabled")
