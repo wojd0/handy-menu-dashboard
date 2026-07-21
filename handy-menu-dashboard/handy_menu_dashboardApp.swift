@@ -15,7 +15,7 @@ struct HandyMenuDashboardApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Settings", id: "settings") {
+        WindowGroup("Settings", id: "settings") {
             SettingsView(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)
         }
         .windowResizability(.contentSize)

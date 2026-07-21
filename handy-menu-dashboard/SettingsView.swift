@@ -66,6 +66,10 @@ struct SettingsView: View {
             githubUsername = copilotService.username
             copilotEntitlement = String(copilotService.monthlyEntitlement)
             launchAtLogin = SMAppService.mainApp.status == .enabled
+            NSApp.setActivationPolicy(.regular)
+        }
+        .onDisappear {
+            NSApp.setActivationPolicy(.accessory)
         }
         .onChange(of: launchAtLogin) { _, newValue in
             let previousValue = !newValue
