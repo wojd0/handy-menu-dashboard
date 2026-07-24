@@ -11,8 +11,10 @@ struct SettingsView: View {
     @Bindable var cursorService: CursorService
     @Bindable var copilotService: CopilotService
     @Bindable var claudeService: ClaudeService
+    @Bindable var chatGPTService: ChatGPTService
     @State private var showCursorLogin = false
     @State private var showClaudeLogin = false
+    @State private var showChatGPTLogin = false
     @State private var githubUsername = ""
     @State private var githubPAT = ""
     @State private var copilotEntitlement = ""
@@ -20,6 +22,7 @@ struct SettingsView: View {
     @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
     @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
+    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTShowPercent = false
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @AppStorage("menuBarInserted") private var menuBarInserted = true
     @State private var launchAtLogin = false
@@ -61,6 +64,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showClaudeLogin) {
             ClaudeLoginView(claudeService: claudeService)
+        }
+        .sheet(isPresented: $showChatGPTLogin) {
+            ChatGPTLoginView(chatGPTService: chatGPTService)
         }
         .onAppear {
             githubUsername = copilotService.username
@@ -121,6 +127,7 @@ struct SettingsView: View {
         case .cursor: cursorSection
         case .copilot: copilotSection
         case .claude: claudeSection
+        case .chatgpt: chatGPTSection
         }
     }
 
@@ -366,6 +373,58 @@ struct SettingsView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Button("Sign in to Claude...") { showClaudeLogin = true }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(16)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var chatGPTSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                dragHandle(for: .chatgpt)
+                Image(systemName: "bubble.left.and.bubble.right")
+                Text("ChatGPT")
+                    .font(.headline)
+                Spacer()
+                if chatGPTService.isAuthenticated {
+                    Toggle("", isOn: $chatGPTService.isEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .onChange(of: chatGPTService.isEnabled) { _, newValue in
+                            UserDefaults.standard.set(newValue, forKey: "chatgptEnabled")
+                        }
+                }
+            }
+
+            if chatGPTService.isAuthenticated {
+                HStack {
+                    Label("Signed in", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Sign Out") { chatGPTService.clearCredentials() }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Menu Bar Unit")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: $chatGPTShowPercent) {
+                        Text("Credits").tag(false)
+                        Text("Percent").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+            } else {
+                Text("Sign in via browser to fetch your ChatGPT monthly credit usage.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Button("Sign in to ChatGPT...") { showChatGPTLogin = true }
                     .buttonStyle(.borderedProminent)
             }
         }

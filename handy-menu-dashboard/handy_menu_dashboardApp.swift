@@ -5,18 +5,34 @@ struct HandyMenuDashboardApp: App {
     @State private var cursorService = CursorService()
     @State private var copilotService = CopilotService()
     @State private var claudeService = ClaudeService()
+    @State private var chatGPTService = ChatGPTService()
     @AppStorage("menuBarInserted") private var menuBarInserted = true
 
     var body: some Scene {
         MenuBarExtra(isInserted: $menuBarInserted) {
-            DashboardView(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)
+            DashboardView(
+                cursorService: cursorService,
+                copilotService: copilotService,
+                claudeService: claudeService,
+                chatGPTService: chatGPTService
+            )
         } label: {
-            MenuBarLabel(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)
+            MenuBarLabel(
+                cursorService: cursorService,
+                copilotService: copilotService,
+                claudeService: claudeService,
+                chatGPTService: chatGPTService
+            )
         }
         .menuBarExtraStyle(.window)
 
         WindowGroup("Settings", id: "settings") {
-            SettingsView(cursorService: cursorService, copilotService: copilotService, claudeService: claudeService)
+            SettingsView(
+                cursorService: cursorService,
+                copilotService: copilotService,
+                claudeService: claudeService,
+                chatGPTService: chatGPTService
+            )
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
@@ -27,10 +43,12 @@ struct MenuBarLabel: View {
     var cursorService: CursorService
     var copilotService: CopilotService
     var claudeService: ClaudeService
+    var chatGPTService: ChatGPTService
     @AppStorage("cursorMenuBarShowPercent") private var cursorShowPercent = false
     @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
     @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
+    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTShowPercent = false
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @Environment(\.displayScale) private var displayScale
 
@@ -55,6 +73,8 @@ struct MenuBarLabel: View {
             copilotShowPercent ? copilotService.menuBarPercentFragment : copilotService.menuBarFragment
         case .claude:
             claudeService.menuBarFragment(baseline: claudeBaseline, showPercent: claudeShowPercent)
+        case .chatgpt:
+            chatGPTShowPercent ? chatGPTService.menuBarPercentFragment : chatGPTService.menuBarFragment
         }
     }
 

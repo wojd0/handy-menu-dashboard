@@ -49,6 +49,27 @@ enum UsageMath {
         "$\(Int(used))/\(Int(limit))"
     }
 
+    static func chatGPTCreditsFragment(used: Double, limit: Double) -> String {
+        "\(formatCompactNumber(used))/\(formatCompactNumber(limit))"
+    }
+
+    static func formatCredits(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.locale = Locale(identifier: "en_US")
+        return formatter.string(from: NSNumber(value: value)) ?? formatCompactNumber(value)
+    }
+
+    static func formatCompactNumber(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.2f", value)
+            .replacingOccurrences(of: "0+$", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\.$", with: "", options: .regularExpression)
+    }
 }
 
 struct ClaudeUsageResponse: Decodable {
@@ -89,4 +110,15 @@ struct CursorUsageSummaryResponse: Decodable {
 
     let isUnlimited: Bool?
     let individualUsage: IndividualUsage?
+}
+
+struct ChatGPTUsageResponse: Decodable {
+    struct EffectiveMonthlyLimit: Decodable {
+        let limit: Double
+        let enforcementMode: String?
+        let limitMode: String?
+    }
+
+    let effectiveMonthlyLimit: EffectiveMonthlyLimit
+    let currentMonthUsage: Double
 }

@@ -37,7 +37,7 @@ Menu bar app using `MenuBarExtra` with `.window` style showing coding agent usag
 
 ### Data Flow
 
-Services (`CursorService`, `CopilotService`, `ClaudeService`) are `@Observable` classes created as `@State` in the `App` struct and passed as parameters to views — not via `@Environment`. All services auto-refresh every 3 minutes via background `Task` loops and store credentials in Keychain.
+Services (`CursorService`, `CopilotService`, `ClaudeService`, `ChatGPTService`) are `@Observable` classes created as `@State` in the `App` struct and passed as parameters to views — not via `@Environment`. All services auto-refresh every 3 minutes via background `Task` loops and store credentials in Keychain.
 
 ### Business Logic
 
@@ -47,6 +47,7 @@ Services (`CursorService`, `CopilotService`, `ClaudeService`) are `@Observable` 
 - **CursorService** — Fetches Cursor IDE team spend via `cursor.com/api/dashboard/get-team-spend`. Cookie-based auth (WebView login flow). Extracts `team_id` from cookies, fetches team spend, then identifies the current user by matching email from `/api/auth/me`.
 - **CopilotService** — Fetches GitHub Copilot premium request usage via GitHub API (`/users/{username}/settings/billing/premium_request/usage`). Fine-grained PAT auth. User-configurable monthly entitlement (default 300).
 - **ClaudeService** — Fetches Claude.ai usage via `claude.ai/api/organizations/{orgId}/usage`. Cookie-based auth (WebView login). Org ID read from the `lastActiveOrg` cookie. Tracks two pools: **spend** (usage limit) and **cinder_cove** (Claude Code & Cowork credit). Supports three baselines (`usageLimit`, `credit`, `combined`) each with Dollars or Percent menu-bar display.
+- **ChatGPTService** — Fetches monthly ChatGPT credits from the current account's spend-control endpoint. Cookie-based auth (WebView login); refreshes the bearer token through the ChatGPT session endpoint and verifies it against the selected `_account` cookie.
 - **KeychainStoring** / **KeychainStore** — Protocol + production implementation wrapping macOS Security framework (`SecItem*` APIs). Injected into services; tests use `InMemoryKeychainStore`. All keys prefixed `com.wojd0.dashboard.*`. Includes automatic migration from legacy keychain format.
 
 ### Views
@@ -57,3 +58,4 @@ Services (`CursorService`, `CopilotService`, `ClaudeService`) are `@Observable` 
 - **SettingsView** — Settings window with per-service cards for Cursor (WebView login), Copilot (PAT entry + entitlement), and Claude (WebView login + baseline/unit pickers). Each service has its own Dollars/Percent menu-bar switch. Claude also has a 3-step baseline picker (Limit / Credit / Combined).
 - **CursorLoginView** — `WKWebView` wrapper for Cursor OAuth login and cookie extraction.
 - **ClaudeLoginView** — `WKWebView` wrapper for Claude login. Extracts `claude.ai` cookies after the user signs in and navigates away from `/login`.
+- **ChatGPTLoginView** — `WKWebView` wrapper for ChatGPT login. Extracts the split NextAuth session cookies and currently selected account cookie.

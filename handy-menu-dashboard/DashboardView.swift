@@ -4,6 +4,7 @@ struct DashboardView: View {
     var cursorService: CursorService
     var copilotService: CopilotService
     var claudeService: ClaudeService
+    var chatGPTService: ChatGPTService
     @Environment(\.openWindow) private var openWindow
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
 
@@ -59,6 +60,7 @@ struct DashboardView: View {
                     group.addTask { await copilotService.refresh() }
                 }
                 group.addTask { await claudeService.refresh() }
+                group.addTask { await chatGPTService.refresh() }
             }
         }
     }
@@ -68,6 +70,7 @@ struct DashboardView: View {
         case .cursor: cursorService.isActive
         case .copilot: copilotService.isActive
         case .claude: claudeService.isActive
+        case .chatgpt: chatGPTService.isActive
         }
     }
 
@@ -98,6 +101,17 @@ struct DashboardView: View {
             )
         case .claude:
             ClaudeUsageCardView(claudeService: claudeService)
+        case .chatgpt:
+            UsageCardView(
+                serviceName: "ChatGPT",
+                percentUsed: chatGPTService.percentUsed,
+                detailText: chatGPTService.detailText,
+                subtitle: nil,
+                isOverLimit: chatGPTService.isOverLimit,
+                isLoading: chatGPTService.isLoading,
+                error: chatGPTService.error,
+                onRefresh: { Task { await chatGPTService.refresh() } }
+            )
         }
     }
 
