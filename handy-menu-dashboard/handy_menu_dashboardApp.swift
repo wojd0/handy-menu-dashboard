@@ -81,11 +81,19 @@ struct MenuBarLabel: View {
     private func renderImage(lines: [String]) -> NSImage? {
         guard !lines.isEmpty else { return nil }
 
-        let fontSize = min(11, 21 / CGFloat(lines.count))
+        let columns = MenuBarLayout.columns(from: lines)
+        let maximumRowCount = columns.map(\.count).max() ?? 1
+        let fontSize = min(11, 21 / CGFloat(maximumRowCount))
+        let columnHeight = fontSize * CGFloat(maximumRowCount) * 1.2
         let renderer = ImageRenderer(content:
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(lines, id: \.self) { line in
-                    Text(line)
+            HStack(alignment: .top, spacing: 4) {
+                ForEach(columns.indices, id: \.self) { columnIndex in
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(columns[columnIndex].indices, id: \.self) { rowIndex in
+                            Text(columns[columnIndex][rowIndex])
+                        }
+                    }
+                    .frame(height: columnHeight, alignment: .center)
                 }
             }
             .font(.system(size: fontSize))
@@ -96,5 +104,27 @@ struct MenuBarLabel: View {
         guard let image = renderer.nsImage else { return nil }
         image.isTemplate = true
         return image
+    }
+}
+
+enum MenuBarLayout {
+    static func columns<Element>(from items: [Element]) -> [[Element]] {
+        guard !items.isEmpty else { return [] }
+        guard items.count > 2 else { return [items] }
+
+        var columns: [[Element]] = []
+        var nextIndex = 0
+
+        if !items.count.isMultiple(of: 2) {
+            columns.append([items[0]])
+            nextIndex = 1
+        }
+
+        while nextIndex < items.count {
+            columns.append(Array(items[nextIndex..<min(nextIndex + 2, items.count)]))
+            nextIndex += 2
+        }
+
+        return columns
     }
 }
