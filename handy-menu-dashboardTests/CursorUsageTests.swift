@@ -34,6 +34,24 @@ struct CursorUsageTests {
         #expect(service.spendPercentUsed == 150)
     }
 
+    @Test func spendPercentRemainingReflectsAvailableAndOverLimitAmounts() {
+        let service = CursorService(keychain: InMemoryKeychainStore())
+        service.monthlyLimitDollars = 100
+
+        service.spendCents = 25_000
+        #expect(service.spendPercentRemaining == -150)
+
+        service.spendCents = 2_500
+        #expect(service.spendPercentRemaining == 75)
+    }
+
+    @Test func spendPercentRemainingIsZeroWhenMonthlyLimitIsZero() {
+        let service = CursorService(keychain: InMemoryKeychainStore())
+        service.spendCents = 2_500
+
+        #expect(service.spendPercentRemaining == 0)
+    }
+
     @Test func menuBarFragmentIsEmptyWhenInactive() {
         let service = CursorService(keychain: InMemoryKeychainStore())
         service.spendCents = 5_000
@@ -60,5 +78,17 @@ struct CursorUsageTests {
         service.monthlyLimitDollars = 50
 
         #expect(service.menuBarFragment == "$49/50")
+    }
+
+    @Test func menuBarFragmentSupportsAllDisplayModes() {
+        let service = CursorService(keychain: InMemoryKeychainStore())
+        service.isAuthenticated = true
+        service.isEnabled = true
+        service.spendCents = 12_500
+        service.monthlyLimitDollars = 100
+
+        #expect(service.menuBarFragment(displayMode: .monetary) == "$125/100")
+        #expect(service.menuBarFragment(displayMode: .percentUsed) == "125%")
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "-25%")
     }
 }

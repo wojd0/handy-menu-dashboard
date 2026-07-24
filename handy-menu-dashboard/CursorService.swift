@@ -32,6 +32,13 @@ final class CursorService {
         UsageMath.spendPercentUsed(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
     }
 
+    var spendPercentRemaining: Double {
+        UsageMath.percentRemaining(
+            used: Double(spendCents),
+            limit: Double(monthlyLimitDollars * 100)
+        )
+    }
+
     var isActive: Bool { isAuthenticated && isEnabled }
 
     var menuBarFragment: String {
@@ -39,9 +46,16 @@ final class CursorService {
         return UsageMath.cursorMenuBarFragment(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
     }
 
-    var menuBarPercentFragment: String {
+    func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        return UsageMath.menuBarPercentFragment(percent: spendPercentUsed)
+        switch displayMode {
+        case .monetary:
+            return menuBarFragment
+        case .percentUsed:
+            return UsageMath.menuBarPercentFragment(percent: spendPercentUsed)
+        case .percentRemaining:
+            return UsageMath.menuBarPercentFragment(percent: spendPercentRemaining)
+        }
     }
 
     init(keychain: any KeychainStoring = KeychainStore()) {

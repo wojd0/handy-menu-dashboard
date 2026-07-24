@@ -62,12 +62,31 @@ struct ClaudeUsageTests {
         #expect(service.percentUsed(for: .usageLimit) == 150)
     }
 
+    @Test func percentRemainingSupportsEveryBaseline() {
+        let service = makeService()
+        service.spendUsedDollars = 150
+        service.spendLimitDollars = 100
+        service.creditUsedDollars = 25
+        service.creditLimitDollars = 100
+
+        #expect(service.percentRemaining(for: .usageLimit) == -50)
+        #expect(service.percentRemaining(for: .credit) == 75)
+        #expect(service.percentRemaining(for: .combined) == 12.5)
+    }
+
+    @Test func percentRemainingIsZeroWhenLimitIsZero() {
+        let service = makeService()
+        service.spendUsedDollars = 10
+
+        #expect(service.percentRemaining(for: .usageLimit) == 0)
+    }
+
     @Test func menuBarFragmentIsEmptyWhenInactive() {
         let service = makeService(authenticated: false)
         service.spendUsedDollars = 50
         service.spendLimitDollars = 100
 
-        #expect(service.menuBarFragment(baseline: .usageLimit, showPercent: false) == "")
+        #expect(service.menuBarFragment(baseline: .usageLimit, displayMode: .monetary) == "")
     }
 
     @Test func menuBarFragmentDollarsUsageLimitShowsUsedOverLimit() {
@@ -75,7 +94,7 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 2.39
         service.spendLimitDollars = 3000
 
-        #expect(service.menuBarFragment(baseline: .usageLimit, showPercent: false) == "$2/3000")
+        #expect(service.menuBarFragment(baseline: .usageLimit, displayMode: .monetary) == "$2/3000")
     }
 
     @Test func menuBarFragmentDollarsCreditShowsUsedOverLimit() {
@@ -83,7 +102,7 @@ struct ClaudeUsageTests {
         service.creditUsedDollars = 10.5
         service.creditLimitDollars = 1000
 
-        #expect(service.menuBarFragment(baseline: .credit, showPercent: false) == "$10/1000")
+        #expect(service.menuBarFragment(baseline: .credit, displayMode: .monetary) == "$10/1000")
     }
 
     @Test func menuBarFragmentDollarsCombinedShowsUsedOverLimit() {
@@ -93,7 +112,7 @@ struct ClaudeUsageTests {
         service.creditUsedDollars = 10.5
         service.creditLimitDollars = 1000
 
-        #expect(service.menuBarFragment(baseline: .combined, showPercent: false) == "$12/4000")
+        #expect(service.menuBarFragment(baseline: .combined, displayMode: .monetary) == "$12/4000")
     }
 
     @Test func menuBarFragmentPercentRoundsToNearestInt() {
@@ -101,8 +120,17 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 1
         service.spendLimitDollars = 3
 
-        let percent = service.menuBarFragment(baseline: .usageLimit, showPercent: true)
+        let percent = service.menuBarFragment(baseline: .usageLimit, displayMode: .percentUsed)
         #expect(percent == "33%")
+    }
+
+    @Test func menuBarFragmentShowsSignedPercentRemaining() {
+        let service = makeService(authenticated: true)
+        service.spendUsedDollars = 5
+        service.spendLimitDollars = 4
+
+        let percent = service.menuBarFragment(baseline: .usageLimit, displayMode: .percentRemaining)
+        #expect(percent == "-25%")
     }
 
     @Test func detailTextForUsageLimitFormatsUsedAndLimit() {

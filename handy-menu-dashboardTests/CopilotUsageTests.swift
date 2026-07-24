@@ -18,6 +18,11 @@ struct CopilotUsageTests {
         #expect(UsageMath.isOverLimit(percentUsed: percent))
     }
 
+    @Test func percentRemainingIsSignedAndZeroWithoutEntitlement() {
+        #expect(UsageMath.percentRemaining(used: 375, limit: 300) == -25)
+        #expect(UsageMath.percentRemaining(used: 42, limit: 0) == 0)
+    }
+
     @Test func menuBarFragmentIsEmptyWhenInactive() {
         let service = CopilotService(keychain: InMemoryKeychainStore())
         service.totalUsed = 120
@@ -44,5 +49,18 @@ struct CopilotUsageTests {
         service.monthlyEntitlement = 300
 
         #expect(service.menuBarFragment == "412/300")
+    }
+
+    @Test func menuBarFragmentSupportsAllDisplayModes() {
+        let service = CopilotService(keychain: InMemoryKeychainStore())
+        service.isAuthenticated = true
+        service.isEnabled = true
+        service.totalUsed = 375
+        service.monthlyEntitlement = 300
+        service.percentUsed = 125
+
+        #expect(service.menuBarFragment(displayMode: .monetary) == "375/300")
+        #expect(service.menuBarFragment(displayMode: .percentUsed) == "125%")
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "-25%")
     }
 }

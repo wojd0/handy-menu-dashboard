@@ -8,6 +8,10 @@ struct HandyMenuDashboardApp: App {
     @State private var chatGPTService = ChatGPTService()
     @AppStorage("menuBarInserted") private var menuBarInserted = true
 
+    init() {
+        MenuBarDisplayMode.migrateLegacyPreferences()
+    }
+
     var body: some Scene {
         MenuBarExtra(isInserted: $menuBarInserted) {
             DashboardView(
@@ -44,11 +48,11 @@ struct MenuBarLabel: View {
     var copilotService: CopilotService
     var claudeService: ClaudeService
     var chatGPTService: ChatGPTService
-    @AppStorage("cursorMenuBarShowPercent") private var cursorShowPercent = false
-    @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
-    @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
+    @AppStorage("cursorMenuBarShowPercent") private var cursorDisplayMode = MenuBarDisplayMode.monetary
+    @AppStorage("copilotMenuBarShowPercent") private var copilotDisplayMode = MenuBarDisplayMode.monetary
+    @AppStorage("claudeMenuBarShowPercent") private var claudeDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
-    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTShowPercent = false
+    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @Environment(\.displayScale) private var displayScale
 
@@ -68,13 +72,13 @@ struct MenuBarLabel: View {
     private func fragment(for provider: Provider) -> String {
         switch provider {
         case .cursor:
-            cursorShowPercent ? cursorService.menuBarPercentFragment : cursorService.menuBarFragment
+            cursorService.menuBarFragment(displayMode: cursorDisplayMode)
         case .copilot:
-            copilotShowPercent ? copilotService.menuBarPercentFragment : copilotService.menuBarFragment
+            copilotService.menuBarFragment(displayMode: copilotDisplayMode)
         case .claude:
-            claudeService.menuBarFragment(baseline: claudeBaseline, showPercent: claudeShowPercent)
+            claudeService.menuBarFragment(baseline: claudeBaseline, displayMode: claudeDisplayMode)
         case .chatgpt:
-            chatGPTShowPercent ? chatGPTService.menuBarPercentFragment : chatGPTService.menuBarFragment
+            chatGPTService.menuBarFragment(displayMode: chatGPTDisplayMode)
         }
     }
 

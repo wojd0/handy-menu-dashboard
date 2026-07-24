@@ -47,6 +47,17 @@ struct ChatGPTUsageTests {
         #expect(service.isOverLimit)
     }
 
+    @Test func percentRemainingIsSignedAndZeroWithoutLimit() {
+        let service = makeService()
+        service.currentMonthUsage = 125
+        service.monthlyLimitCredits = 100
+
+        #expect(service.percentRemaining == -25)
+
+        service.monthlyLimitCredits = 0
+        #expect(service.percentRemaining == 0)
+    }
+
     @Test func formatsDashboardCreditsWithGroupingAndFraction() {
         let service = makeService()
         service.currentMonthUsage = 12.5
@@ -61,17 +72,20 @@ struct ChatGPTUsageTests {
         service.monthlyLimitCredits = 40_000
 
         #expect(service.menuBarFragment == "")
-        #expect(service.menuBarPercentFragment == "")
+        #expect(service.menuBarFragment(displayMode: .percentUsed) == "")
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "")
     }
 
-    @Test func menuBarSupportsCreditsAndPercent() {
+    @Test func menuBarSupportsCreditsAndPercentModes() {
         let service = makeService()
         service.isAuthenticated = true
         service.currentMonthUsage = 10_000
         service.monthlyLimitCredits = 40_000
 
         #expect(service.menuBarFragment == "10000/40000")
-        #expect(service.menuBarPercentFragment == "25%")
+        #expect(service.menuBarFragment(displayMode: .monetary) == "10000/40000")
+        #expect(service.menuBarFragment(displayMode: .percentUsed) == "25%")
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "75%")
     }
 
     @Test func extractsAccountFromJWT() throws {

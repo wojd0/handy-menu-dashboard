@@ -54,6 +54,14 @@ final class ClaudeService {
         }
     }
 
+    func percentRemaining(for baseline: ClaudeBaseline) -> Double {
+        switch baseline {
+        case .usageLimit: UsageMath.percentRemaining(used: spendUsedDollars, limit: spendLimitDollars)
+        case .credit: UsageMath.percentRemaining(used: creditUsedDollars, limit: creditLimitDollars)
+        case .combined: UsageMath.percentRemaining(used: combinedUsedDollars, limit: combinedLimitDollars)
+        }
+    }
+
     func detailText(for baseline: ClaudeBaseline) -> String {
         switch baseline {
         case .usageLimit:
@@ -65,18 +73,22 @@ final class ClaudeService {
         }
     }
 
-    func menuBarFragment(baseline: ClaudeBaseline, showPercent: Bool) -> String {
+    func menuBarFragment(baseline: ClaudeBaseline, displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        if showPercent {
+        switch displayMode {
+        case .percentUsed:
             return UsageMath.menuBarPercentFragment(percent: percentUsed(for: baseline))
-        }
-        switch baseline {
-        case .usageLimit:
-            return UsageMath.claudeDollarsFragment(used: spendUsedDollars, limit: spendLimitDollars)
-        case .credit:
-            return UsageMath.claudeDollarsFragment(used: creditUsedDollars, limit: creditLimitDollars)
-        case .combined:
-            return UsageMath.claudeDollarsFragment(used: combinedUsedDollars, limit: combinedLimitDollars)
+        case .percentRemaining:
+            return UsageMath.menuBarPercentFragment(percent: percentRemaining(for: baseline))
+        case .monetary:
+            switch baseline {
+            case .usageLimit:
+                return UsageMath.claudeDollarsFragment(used: spendUsedDollars, limit: spendLimitDollars)
+            case .credit:
+                return UsageMath.claudeDollarsFragment(used: creditUsedDollars, limit: creditLimitDollars)
+            case .combined:
+                return UsageMath.claudeDollarsFragment(used: combinedUsedDollars, limit: combinedLimitDollars)
+            }
         }
     }
 

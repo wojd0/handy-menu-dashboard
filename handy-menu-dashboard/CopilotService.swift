@@ -20,14 +20,25 @@ final class CopilotService {
 
     var isActive: Bool { FeatureFlags.showGitHubSettings && isAuthenticated && isEnabled }
 
+    var percentRemaining: Double {
+        UsageMath.percentRemaining(used: Double(totalUsed), limit: Double(monthlyEntitlement))
+    }
+
     var menuBarFragment: String {
         guard isActive else { return "" }
         return UsageMath.copilotMenuBarFragment(totalUsed: totalUsed, monthlyEntitlement: monthlyEntitlement)
     }
 
-    var menuBarPercentFragment: String {
+    func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        return UsageMath.menuBarPercentFragment(percent: percentUsed)
+        switch displayMode {
+        case .monetary:
+            return menuBarFragment
+        case .percentUsed:
+            return UsageMath.menuBarPercentFragment(percent: percentUsed)
+        case .percentRemaining:
+            return UsageMath.menuBarPercentFragment(percent: percentRemaining)
+        }
     }
 
     init(keychain: any KeychainStoring = KeychainStore()) {

@@ -8,10 +8,10 @@ A macOS menu bar app that tracks coding-agent usage at a glance.
 ## Features
 
 - **Cursor** — Current billing-period spend against your team per-user monthly limit.
-- **Claude** — Claude.ai usage across two pools: usage limit (General) and Claude Code & Cowork credit. Pick a baseline (General / Code and Cowork / Combined) and dollars or percent.
+- **Claude** — Claude.ai usage across two pools: usage limit (General) and Claude Code & Cowork credit. Pick a baseline (General / Code and Cowork / Combined) and dollars, % used, or % remaining.
 - **ChatGPT** — Monthly credit usage against the effective spend-control limit for the currently selected ChatGPT account.
 - **GitHub Copilot** — Premium request usage for the month against a configurable entitlement (feature flagged for now).
-- **Menu bar summary** — Compact per-service labels; drag to reorder, toggle dollars/percent per service.
+- **Menu bar summary** — Compact per-service labels; drag to reorder and show monetary units, % used, or % remaining per service.
 - **Secure & sandboxed** — Cookies and PATs live in the macOS Keychain; outbound network only.
 
 ## Requirements
@@ -35,9 +35,9 @@ make lint         # SwiftLint (optional, advisory)
 
 ## Configuration
 
-Open **Settings** from the dashboard popover (gear icon). Each service has its own login/credentials, an **Enabled** toggle, and a dollars/percent switch.
+Open **Settings** from the dashboard popover (gear icon). Each service has its own login/credentials, an **Enabled** toggle, and a menu-bar display selector for monetary units, % used, or % remaining.
 
-- **Cursor / Claude / ChatGPT** — Sign in via the embedded WebView; cookies are saved to Keychain. Claude also lets you pick a baseline (General / Code and Cowork / Combined). ChatGPT tracks the account selected during sign-in and can show credits or percent in the menu bar.
+- **Cursor / Claude / ChatGPT** — Sign in via the embedded WebView; cookies are saved to Keychain. Claude also lets you pick a baseline (General / Code and Cowork / Combined). ChatGPT tracks the account selected during sign-in and can show credits, % used, or % remaining in the menu bar.
 - **GitHub Copilot** — Enter your username and a [fine-grained PAT](https://github.com/settings/tokens?type=beta) with read access to **Account** billing/usage, plus a monthly entitlement (default **300**).
 
 GitHub Copilot is hidden by default — to enable it locally, copy `.env.example` to `.env`, set `SHOW_GITHUB_SETTINGS=true`, and rebuild. See [CLAUDE.md](CLAUDE.md) for details.

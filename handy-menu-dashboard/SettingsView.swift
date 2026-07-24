@@ -18,11 +18,11 @@ struct SettingsView: View {
     @State private var githubUsername = ""
     @State private var githubPAT = ""
     @State private var copilotEntitlement = ""
-    @AppStorage("cursorMenuBarShowPercent") private var cursorShowPercent = false
-    @AppStorage("copilotMenuBarShowPercent") private var copilotShowPercent = false
-    @AppStorage("claudeMenuBarShowPercent") private var claudeShowPercent = false
+    @AppStorage("cursorMenuBarShowPercent") private var cursorDisplayMode = MenuBarDisplayMode.monetary
+    @AppStorage("copilotMenuBarShowPercent") private var copilotDisplayMode = MenuBarDisplayMode.monetary
+    @AppStorage("claudeMenuBarShowPercent") private var claudeDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
-    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTShowPercent = false
+    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @AppStorage("menuBarInserted") private var menuBarInserted = true
     @State private var launchAtLogin = false
@@ -207,9 +207,10 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $cursorShowPercent) {
-                        Text("Dollars").tag(false)
-                        Text("Percent").tag(true)
+                    Picker("", selection: $cursorDisplayMode) {
+                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
+                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
+                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -276,9 +277,10 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $copilotShowPercent) {
-                        Text("Dollars").tag(false)
-                        Text("Percent").tag(true)
+                    Picker("", selection: $copilotDisplayMode) {
+                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
+                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
+                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -360,9 +362,10 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $claudeShowPercent) {
-                        Text("Dollars").tag(false)
-                        Text("Percent").tag(true)
+                    Picker("", selection: $claudeDisplayMode) {
+                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
+                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
+                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -412,9 +415,10 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $chatGPTShowPercent) {
-                        Text("Credits").tag(false)
-                        Text("Percent").tag(true)
+                    Picker("", selection: $chatGPTDisplayMode) {
+                        Text("Credits").tag(MenuBarDisplayMode.monetary)
+                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
+                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()

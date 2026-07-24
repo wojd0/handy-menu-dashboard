@@ -37,6 +37,11 @@ enum UsageMath {
         return used / limit * 100
     }
 
+    static func percentRemaining(used: Double, limit: Double) -> Double {
+        guard limit > 0 else { return 0 }
+        return 100 - percentUsed(used: used, limit: limit)
+    }
+
     static func dollars(amountMinor: Int, exponent: Int) -> Double {
         Double(amountMinor) / pow(10.0, Double(exponent))
     }

@@ -28,6 +28,10 @@ final class ChatGPTService {
         UsageMath.percentUsed(used: currentMonthUsage, limit: monthlyLimitCredits)
     }
 
+    var percentRemaining: Double {
+        UsageMath.percentRemaining(used: currentMonthUsage, limit: monthlyLimitCredits)
+    }
+
     var isOverLimit: Bool {
         UsageMath.isOverLimit(percentUsed: percentUsed)
     }
@@ -46,9 +50,16 @@ final class ChatGPTService {
         return UsageMath.chatGPTCreditsFragment(used: currentMonthUsage, limit: monthlyLimitCredits)
     }
 
-    var menuBarPercentFragment: String {
+    func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        return UsageMath.menuBarPercentFragment(percent: percentUsed)
+        switch displayMode {
+        case .monetary:
+            return menuBarFragment
+        case .percentUsed:
+            return UsageMath.menuBarPercentFragment(percent: percentUsed)
+        case .percentRemaining:
+            return UsageMath.menuBarPercentFragment(percent: percentRemaining)
+        }
     }
 
     init(
