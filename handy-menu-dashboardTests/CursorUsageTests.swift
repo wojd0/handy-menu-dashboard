@@ -91,4 +91,18 @@ struct CursorUsageTests {
         #expect(service.menuBarFragment(displayMode: .percentUsed) == "125%")
         #expect(service.menuBarFragment(displayMode: .percentRemaining) == "-25%")
     }
+
+    @Test func unlimitedUsageDisplaysInfinityForLimitAndMenuBarModes() {
+        let service = CursorService(keychain: InMemoryKeychainStore())
+        service.isAuthenticated = true
+        service.isEnabled = true
+        service.spendCents = 15_000
+        service.isUnlimited = true
+
+        #expect(service.limitFormatted == "∞")
+        #expect(service.menuBarFragment == "$150/∞")
+        #expect(service.menuBarFragment(displayMode: .monetary) == "$150/∞")
+        #expect(service.menuBarFragment(displayMode: .percentUsed) == "∞%")
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "∞%")
+    }
 }

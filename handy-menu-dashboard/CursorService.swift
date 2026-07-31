@@ -10,6 +10,7 @@ final class CursorService {
     var isEnabled = true
     var spendCents: Int = 0
     var monthlyLimitDollars: Int = 0
+    var isUnlimited = false
     var userName: String?
 
     private var cookieHeader: String?
@@ -25,7 +26,10 @@ final class CursorService {
     }
 
     var limitFormatted: String {
-        "$\(monthlyLimitDollars)"
+        if isUnlimited {
+            return UsageMath.infinitySymbol
+        }
+        return "$\(monthlyLimitDollars)"
     }
 
     var spendPercentUsed: Double {
@@ -43,7 +47,11 @@ final class CursorService {
 
     var menuBarFragment: String {
         guard isActive else { return "" }
-        return UsageMath.cursorMenuBarFragment(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
+        return UsageMath.cursorMenuBarFragment(
+            spendCents: spendCents,
+            monthlyLimitDollars: monthlyLimitDollars,
+            isUnlimited: isUnlimited
+        )
     }
 
     func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
@@ -52,9 +60,9 @@ final class CursorService {
         case .monetary:
             return menuBarFragment
         case .percentUsed:
-            return UsageMath.menuBarPercentFragment(percent: spendPercentUsed)
+            return UsageMath.menuBarPercentFragment(percent: spendPercentUsed, isUnlimited: isUnlimited)
         case .percentRemaining:
-            return UsageMath.menuBarPercentFragment(percent: spendPercentRemaining)
+            return UsageMath.menuBarPercentFragment(percent: spendPercentRemaining, isUnlimited: isUnlimited)
         }
     }
 
@@ -81,6 +89,7 @@ final class CursorService {
         isAuthenticated = false
         spendCents = 0
         monthlyLimitDollars = 0
+        isUnlimited = false
         userName = nil
         error = nil
     }
@@ -97,6 +106,7 @@ final class CursorService {
             isAuthenticated = true
 
             if let overall = summary.individualUsage?.overall {
+                isUnlimited = summary.isUnlimited == true || overall.limit == nil
                 spendCents = overall.used ?? 0
                 monthlyLimitDollars = (overall.limit ?? 0) / 100
             }

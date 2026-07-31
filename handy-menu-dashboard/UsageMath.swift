@@ -1,6 +1,8 @@
 import Foundation
 
 enum UsageMath {
+    static let infinitySymbol = "∞"
+
     static func formatCentsAsDollars(_ cents: Int) -> String {
         let dollars = Double(cents) / 100.0
         return String(format: "$%.2f", dollars)
@@ -11,13 +13,21 @@ enum UsageMath {
         return Double(spendCents) / Double(monthlyLimitDollars * 100) * 100
     }
 
-    static func cursorMenuBarFragment(spendCents: Int, monthlyLimitDollars: Int) -> String {
+    static func cursorMenuBarFragment(
+        spendCents: Int,
+        monthlyLimitDollars: Int,
+        isUnlimited: Bool = false
+    ) -> String {
         let dollars = Int(Double(spendCents) / 100.0)
-        return "$\(dollars)/\(monthlyLimitDollars)"
+        let limit = isUnlimited ? infinitySymbol : "\(monthlyLimitDollars)"
+        return "$\(dollars)/\(limit)"
     }
 
-    static func menuBarPercentFragment(percent: Double) -> String {
-        "\(Int(percent.rounded()))%"
+    static func menuBarPercentFragment(percent: Double, isUnlimited: Bool = false) -> String {
+        if isUnlimited {
+            return "\(infinitySymbol)%"
+        }
+        return "\(Int(percent.rounded()))%"
     }
 
     static func copilotPercentUsed(totalUsed: Int, monthlyEntitlement: Int) -> Double {

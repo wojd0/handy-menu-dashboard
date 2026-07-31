@@ -84,6 +84,7 @@ struct DashboardView: View {
                 detailText: "\(cursorService.spendFormatted) / \(cursorService.limitFormatted)",
                 subtitle: cursorService.userName,
                 isOverLimit: cursorService.spendPercentUsed > 100,
+                isUnlimited: cursorService.isUnlimited,
                 isLoading: cursorService.isLoading,
                 error: cursorService.error,
                 onRefresh: { Task { await cursorService.refresh() } }

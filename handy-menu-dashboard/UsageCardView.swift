@@ -6,6 +6,7 @@ struct UsageCardView: View {
     let detailText: String
     let subtitle: String?
     let isOverLimit: Bool
+    var isUnlimited = false
     let isLoading: Bool
     let error: String?
     let onRefresh: () -> Void
@@ -38,7 +39,7 @@ struct UsageCardView: View {
                     .foregroundStyle(.red)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(Int(percentUsed))%")
+                    Text(isUnlimited ? "\(UsageMath.infinitySymbol)%" : "\(Int(percentUsed))%")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(isOverLimit ? .red : .primary)
@@ -60,7 +61,9 @@ struct UsageCardView: View {
                         .foregroundStyle(.tertiary)
                 }
 
-                UsageProgressBar(percentage: percentUsed, isOverLimit: isOverLimit)
+                if !isUnlimited {
+                    UsageProgressBar(percentage: percentUsed, isOverLimit: isOverLimit)
+                }
             }
         }
     }
