@@ -1,6 +1,12 @@
 import Foundation
 import Observation
 
+enum ChatGPTAuthenticationResult: Equatable {
+    case authenticated
+    case staleSession
+    case failure(String)
+}
+
 @Observable
 final class ChatGPTService {
     typealias DataLoader = (URLRequest) async throws -> (Data, URLResponse)
@@ -23,6 +29,7 @@ final class ChatGPTService {
     static let browserUserAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
         + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
+    static let websiteDataDomains = ["chatgpt.com", "openai.com"]
 
     var percentUsed: Double {
         UsageMath.percentUsed(used: currentMonthUsage, limit: monthlyLimitCredits)
@@ -76,18 +83,43 @@ final class ChatGPTService {
         }
     }
 
-    func saveCookies(_ cookies: [HTTPCookie]) {
+    func authenticate(with cookies: [HTTPCookie]) async -> ChatGPTAuthenticationResult {
         let header = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-        guard !header.isEmpty, extractCookieValue(named: "_account", from: header) != nil else { return }
-        keychain.saveString(key: .chatGPTCookies, value: header)
-        cookieHeader = header
-        isAuthenticated = true
-        Task { await refresh() }
+        guard !header.isEmpty, extractCookieValue(named: "_account", from: header) != nil else {
+            let message = "Invalid response from ChatGPT"
+            error = message
+            return .failure(message)
+        }
+
+        isLoading = true
+        error = nil
+        defer { isLoading = false }
+
+        do {
+            let usage = try await loadUsage(cookieHeader: header)
+            keychain.saveString(key: .chatGPTCookies, value: header)
+            cookieHeader = header
+            applyUsage(usage)
+            isAuthenticated = true
+            return .authenticated
+        } catch let serviceError as ServiceError {
+            handleServiceError(serviceError)
+            switch serviceError {
+            case .authExpired, .accountMismatch:
+                return .staleSession
+            case .httpError, .network, .invalidResponse:
+                return .failure(error ?? "Unable to sign in to ChatGPT")
+            }
+        } catch {
+            let message = "Invalid response from ChatGPT"
+            self.error = message
+            return .failure(message)
+        }
     }
 
     func clearCredentials() {
         keychain.delete(key: .chatGPTCookies)
-        WebAuthSession.clearCookies(matching: "chatgpt.com")
+        WebAuthSession.clearWebsiteData(matching: Self.websiteDataDomains)
         cookieHeader = nil
         isAuthenticated = false
         currentMonthUsage = 0
@@ -105,18 +137,7 @@ final class ChatGPTService {
         defer { isLoading = false }
 
         do {
-            let accountCookie = try currentAccountID(from: cookieHeader)
-            let accessToken = try await fetchAccessToken(cookieHeader: cookieHeader)
-            let tokenAccount = try Self.accountID(fromJWT: accessToken)
-            guard accountCookie == tokenAccount else {
-                throw ServiceError.accountMismatch
-            }
-
-            let usage = try await fetchUsage(
-                accountID: accountCookie,
-                accessToken: accessToken,
-                cookieHeader: cookieHeader
-            )
+            let usage = try await loadUsage(cookieHeader: cookieHeader)
             applyUsage(usage)
             isAuthenticated = true
         } catch let serviceError as ServiceError {
@@ -124,6 +145,21 @@ final class ChatGPTService {
         } catch {
             self.error = "Invalid response from ChatGPT"
         }
+    }
+
+    private func loadUsage(cookieHeader: String) async throws -> ChatGPTUsageResponse {
+        let accountCookie = try currentAccountID(from: cookieHeader)
+        let accessToken = try await fetchAccessToken(cookieHeader: cookieHeader)
+        let tokenAccount = try Self.accountID(fromJWT: accessToken)
+        guard accountCookie == tokenAccount else {
+            throw ServiceError.accountMismatch
+        }
+
+        return try await fetchUsage(
+            accountID: accountCookie,
+            accessToken: accessToken,
+            cookieHeader: cookieHeader
+        )
     }
 
     static func accountID(fromJWT token: String) throws -> String {
@@ -262,6 +298,8 @@ final class ChatGPTService {
     private func handleServiceError(_ serviceError: ServiceError) {
         switch serviceError {
         case .authExpired, .accountMismatch:
+            keychain.delete(key: .chatGPTCookies)
+            cookieHeader = nil
             isAuthenticated = false
             error = "Session expired. Please sign in again."
         case .httpError(let code):

@@ -1,10 +1,17 @@
 import Foundation
 import Testing
+import WebKit
 @testable import handy_menu_dashboard
 
 @Suite("ChatGPT usage")
 struct ChatGPTUsageTests {
     private let accountID = "11111111-2222-3333-4444-555555555555"
+
+    @Test func loginUsesAPersistentWebSession() {
+        let configuration = ChatGPTWebView.makeConfiguration()
+
+        #expect(configuration.websiteDataStore.isPersistent)
+    }
 
     @Test func decodesMonthlyUsageResponse() throws {
         let data = Data(
@@ -100,6 +107,77 @@ struct ChatGPTUsageTests {
         }
     }
 
+    @Test func authenticationPersistsCookiesOnlyAfterValidation() async throws {
+        let keychain = InMemoryKeychainStore()
+        let token = makeJWT(accountID: accountID)
+        var requests: [URLRequest] = []
+        let service = ChatGPTService(
+            keychain: keychain,
+            dataLoader: { request in
+                requests.append(request)
+                #expect(keychain.loadString(key: .chatGPTCookies) == nil)
+                if request.url?.path == "/api/auth/session" {
+                    return try response(for: request, json: ["accessToken": token])
+                }
+                return try response(
+                    for: request,
+                    json: [
+                        "effective_monthly_limit": [
+                            "limit": 40_000,
+                            "enforcement_mode": "HARD_CAP",
+                            "limit_mode": "amount_credits"
+                        ],
+                        "current_month_usage": 125.25
+                    ]
+                )
+            },
+            autoRefresh: false
+        )
+
+        let result = await service.authenticate(with: makeCookies())
+
+        #expect(result == .authenticated)
+        #expect(service.isAuthenticated)
+        #expect(service.currentMonthUsage == 125.25)
+        #expect(keychain.loadString(key: .chatGPTCookies)?.contains("_account=\(accountID)") == true)
+        #expect(requests.count == 2)
+    }
+
+    @Test func authenticationRejectsAndDeletesAStaleSession() async throws {
+        let keychain = InMemoryKeychainStore()
+        keychain.saveString(key: .chatGPTCookies, value: "previous=session")
+        let service = ChatGPTService(
+            keychain: keychain,
+            dataLoader: { request in
+                try response(for: request, status: 401, json: [:])
+            },
+            autoRefresh: false
+        )
+
+        let result = await service.authenticate(with: makeCookies())
+
+        #expect(result == .staleSession)
+        #expect(!service.isAuthenticated)
+        #expect(service.error == "Session expired. Please sign in again.")
+        #expect(keychain.loadString(key: .chatGPTCookies) == nil)
+    }
+
+    @Test func authenticationKeepsRecoverableFailuresRetryable() async {
+        struct NetworkFailure: Error {}
+        let keychain = InMemoryKeychainStore()
+        let service = ChatGPTService(
+            keychain: keychain,
+            dataLoader: { _ in throw NetworkFailure() },
+            autoRefresh: false
+        )
+
+        let result = await service.authenticate(with: makeCookies())
+
+        #expect(result == .failure("Unable to connect to ChatGPT"))
+        #expect(!service.isAuthenticated)
+        #expect(keychain.loadString(key: .chatGPTCookies) == nil)
+    }
+
     @Test func refreshLoadsSessionThenMonthlyUsage() async throws {
         let keychain = InMemoryKeychainStore()
         keychain.saveString(
@@ -164,6 +242,7 @@ struct ChatGPTUsageTests {
 
         #expect(!service.isAuthenticated)
         #expect(service.error == "Session expired. Please sign in again.")
+        #expect(keychain.loadString(key: .chatGPTCookies) == nil)
     }
 
     @Test func refreshMapsNetworkFailure() async {
@@ -235,6 +314,23 @@ struct ChatGPTUsageTests {
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
         return "header.\(encoded).signature"
+    }
+
+    private func makeCookies() -> [HTTPCookie] {
+        [
+            HTTPCookie(properties: [
+                .domain: ".chatgpt.com",
+                .path: "/",
+                .name: "_account",
+                .value: accountID
+            ])!,
+            HTTPCookie(properties: [
+                .domain: ".chatgpt.com",
+                .path: "/",
+                .name: "__Secure-next-auth.session-token.0",
+                .value: "test"
+            ])!
+        ]
     }
 
     private func response(
