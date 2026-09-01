@@ -108,9 +108,8 @@ final class ClaudeService {
         Task { await refresh() }
     }
 
-    func clearCredentials() {
+    func clearCredentials() async {
         keychain.delete(key: .claudeCookies)
-        WebAuthSession.clearCookies(matching: "claude.ai")
         cookieHeader = nil
         isAuthenticated = false
         spendUsedDollars = 0
@@ -121,6 +120,7 @@ final class ClaudeService {
         hasSpend = false
         hasCredit = false
         error = nil
+        await WebAuthSession.clearAllWebsiteData()
     }
 
     func refresh() async {
@@ -133,6 +133,7 @@ final class ClaudeService {
         do {
             let orgId = try await resolveOrgId(cookieHeader: cookieHeader)
             let usage = try await fetchUsage(orgId: orgId, cookieHeader: cookieHeader)
+            guard self.cookieHeader == cookieHeader else { return }
             applyUsage(usage)
         } catch let err as ServiceError {
             handleServiceError(err)

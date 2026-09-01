@@ -29,6 +29,7 @@ struct SettingsView: View {
     @State private var draggedProvider: Provider?
     @State private var dropIndicator: DropIndicator?
     @State private var cardHeights: [Provider: CGFloat] = [:]
+    @State private var signingOutProvider: Provider?
     private let fineGrainedPATURL = URL(
         string: "https://github.com/settings/personal-access-tokens/new?"
             + "description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read"
@@ -198,9 +199,10 @@ struct SettingsView: View {
                     Label("Signed in", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Spacer()
-                    Button("Sign Out") { cursorService.clearCredentials() }
+                    Button("Sign Out") { signOut(.cursor) }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .disabled(signingOutProvider != nil)
                 }
 
                 HStack {
@@ -220,8 +222,9 @@ struct SettingsView: View {
                 Text("Sign in via browser to fetch your Cursor usage data.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                Button("Sign in to Cursor...") { showCursorLogin = true }
+                Button(signInButtonTitle(for: .cursor)) { showCursorLogin = true }
                     .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil)
             }
         }
         .padding(16)
@@ -341,9 +344,10 @@ struct SettingsView: View {
                     Label("Signed in", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Spacer()
-                    Button("Sign Out") { claudeService.clearCredentials() }
+                    Button("Sign Out") { signOut(.claude) }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .disabled(signingOutProvider != nil)
                 }
 
                 HStack {
@@ -375,8 +379,9 @@ struct SettingsView: View {
                 Text("Sign in via browser to fetch your Claude usage data.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                Button("Sign in to Claude...") { showClaudeLogin = true }
+                Button(signInButtonTitle(for: .claude)) { showClaudeLogin = true }
                     .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil)
             }
         }
         .padding(16)
@@ -406,9 +411,10 @@ struct SettingsView: View {
                     Label("Signed in", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Spacer()
-                    Button("Sign Out") { chatGPTService.clearCredentials() }
+                    Button("Sign Out") { signOut(.chatgpt) }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .disabled(signingOutProvider != nil)
                 }
 
                 HStack {
@@ -428,12 +434,36 @@ struct SettingsView: View {
                 Text("Sign in via browser to fetch your ChatGPT monthly credit usage.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                Button("Sign in to ChatGPT...") { showChatGPTLogin = true }
+                Button(signInButtonTitle(for: .chatgpt)) { showChatGPTLogin = true }
                     .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil)
             }
         }
         .padding(16)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func signInButtonTitle(for provider: Provider) -> String {
+        signingOutProvider == provider ? "Clearing browser session..." : "Sign in to \(provider.displayName)..."
+    }
+
+    private func signOut(_ provider: Provider) {
+        guard signingOutProvider == nil else { return }
+        signingOutProvider = provider
+
+        Task {
+            switch provider {
+            case .cursor:
+                await cursorService.clearCredentials()
+            case .claude:
+                await claudeService.clearCredentials()
+            case .chatgpt:
+                await chatGPTService.clearCredentials()
+            case .copilot:
+                break
+            }
+            signingOutProvider = nil
+        }
     }
 }
 

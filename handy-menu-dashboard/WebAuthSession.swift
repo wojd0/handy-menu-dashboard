@@ -1,8 +1,19 @@
 import WebKit
 
 enum WebAuthSession {
-    static func clearCookies(matching domain: String) {
-        clearWebsiteData(matching: [domain])
+    static func clearAllWebsiteData() async {
+        await clearAllWebsiteData(in: .default())
+    }
+
+    static func clearAllWebsiteData(in store: WKWebsiteDataStore) async {
+        await withCheckedContinuation { continuation in
+            store.removeData(
+                ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                modifiedSince: .distantPast
+            ) {
+                continuation.resume()
+            }
+        }
     }
 
     static func clearWebsiteData(

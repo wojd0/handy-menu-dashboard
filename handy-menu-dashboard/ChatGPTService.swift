@@ -117,9 +117,8 @@ final class ChatGPTService {
         }
     }
 
-    func clearCredentials() {
+    func clearCredentials() async {
         keychain.delete(key: .chatGPTCookies)
-        WebAuthSession.clearWebsiteData(matching: Self.websiteDataDomains)
         cookieHeader = nil
         isAuthenticated = false
         currentMonthUsage = 0
@@ -127,6 +126,7 @@ final class ChatGPTService {
         enforcementMode = nil
         limitMode = nil
         error = nil
+        await WebAuthSession.clearAllWebsiteData()
     }
 
     func refresh() async {
@@ -138,6 +138,7 @@ final class ChatGPTService {
 
         do {
             let usage = try await loadUsage(cookieHeader: cookieHeader)
+            guard self.cookieHeader == cookieHeader else { return }
             applyUsage(usage)
             isAuthenticated = true
         } catch let serviceError as ServiceError {

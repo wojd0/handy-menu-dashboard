@@ -82,9 +82,8 @@ final class CursorService {
         Task { await refresh() }
     }
 
-    func clearCredentials() {
+    func clearCredentials() async {
         keychain.delete(key: .cursorCookies)
-        WebAuthSession.clearCookies(matching: "cursor.com")
         cookieHeader = nil
         isAuthenticated = false
         spendCents = 0
@@ -92,6 +91,7 @@ final class CursorService {
         isUnlimited = false
         userName = nil
         error = nil
+        await WebAuthSession.clearAllWebsiteData()
     }
 
     func refresh() async {
@@ -103,6 +103,7 @@ final class CursorService {
 
         do {
             let summary = try await fetchUsageSummary(cookie: cookieHeader)
+            guard self.cookieHeader == cookieHeader else { return }
             isAuthenticated = true
 
             if let overall = summary.individualUsage?.overall {
@@ -113,6 +114,7 @@ final class CursorService {
 
             if userName == nil {
                 let me = try await fetchMe(cookie: cookieHeader)
+                guard self.cookieHeader == cookieHeader else { return }
                 userName = me.name
             }
         } catch let error as ServiceError {
