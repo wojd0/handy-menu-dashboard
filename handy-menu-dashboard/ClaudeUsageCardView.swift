@@ -6,8 +6,7 @@ struct ClaudeUsageCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Claude")
-                    .font(.headline)
+                ProviderTitle(provider: .claude)
 
                 Spacer()
 

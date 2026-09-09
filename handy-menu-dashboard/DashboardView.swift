@@ -79,7 +79,7 @@ struct DashboardView: View {
         switch provider {
         case .cursor:
             UsageCardView(
-                serviceName: "Cursor",
+                provider: .cursor,
                 percentUsed: cursorService.spendPercentUsed,
                 detailText: "\(cursorService.spendFormatted) / \(cursorService.limitFormatted)",
                 subtitle: cursorService.userName,
@@ -91,7 +91,7 @@ struct DashboardView: View {
             )
         case .copilot:
             UsageCardView(
-                serviceName: "GitHub Copilot",
+                provider: .copilot,
                 percentUsed: copilotService.percentUsed,
                 detailText: "\(copilotService.totalUsed) / \(copilotService.monthlyEntitlement) premium requests",
                 subtitle: nil,
@@ -104,7 +104,7 @@ struct DashboardView: View {
             ClaudeUsageCardView(claudeService: claudeService)
         case .chatgpt:
             UsageCardView(
-                serviceName: "ChatGPT",
+                provider: .chatgpt,
                 percentUsed: chatGPTService.percentUsed,
                 detailText: chatGPTService.detailText,
                 subtitle: nil,

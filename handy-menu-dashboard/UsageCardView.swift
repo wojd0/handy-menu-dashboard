@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct UsageCardView: View {
-    let serviceName: String
+    let provider: Provider
     let percentUsed: Double
     let detailText: String
     let subtitle: String?
@@ -14,8 +14,7 @@ struct UsageCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(serviceName)
-                    .font(.headline)
+                ProviderTitle(provider: provider)
 
                 Spacer()
 

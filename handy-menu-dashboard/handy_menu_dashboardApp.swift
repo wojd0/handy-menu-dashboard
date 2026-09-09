@@ -54,15 +54,19 @@ struct MenuBarLabel: View {
     @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
     @AppStorage("chatgptMenuBarShowPercent") private var chatGPTDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         let lines = Provider.ordered(from: providerOrderRaw)
-            .map(fragment(for:))
-            .filter { !$0.isEmpty }
+            .map { provider in
+                MenuBarLine(provider: provider, text: fragment(for: provider))
+            }
+            .filter { !$0.text.isEmpty }
 
         if let image = renderImage(lines: lines) {
             Image(nsImage: image)
+                .renderingMode(.original)
         } else {
             Text("Usage")
                 .font(.caption2)
@@ -82,19 +86,30 @@ struct MenuBarLabel: View {
         }
     }
 
-    private func renderImage(lines: [String]) -> NSImage? {
+    private func renderImage(lines: [MenuBarLine]) -> NSImage? {
         guard !lines.isEmpty else { return nil }
 
         let columns = MenuBarLayout.columns(from: lines)
         let maximumRowCount = columns.map(\.count).max() ?? 1
         let fontSize = min(11, 21 / CGFloat(maximumRowCount))
-        let columnHeight = fontSize * CGFloat(maximumRowCount) * 1.2
+        let pixelLength = 1 / displayScale
+        let underlineHeight = pixelLength
+        let underlineSpacing = pixelLength
+        let underlineDecorationHeight = underlineHeight + underlineSpacing
+        let columnHeight = (fontSize * 1.2 + underlineDecorationHeight) * CGFloat(maximumRowCount)
         let renderer = ImageRenderer(content:
             HStack(alignment: .top, spacing: 4) {
                 ForEach(columns.indices, id: \.self) { columnIndex in
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(columns[columnIndex].indices, id: \.self) { rowIndex in
-                            Text(columns[columnIndex][rowIndex])
+                            let line = columns[columnIndex][rowIndex]
+                            Text(line.text)
+                                .padding(.bottom, underlineDecorationHeight)
+                                .overlay(alignment: .bottom) {
+                                    Rectangle()
+                                        .fill(line.provider.accentColor)
+                                        .frame(height: underlineHeight)
+                                }
                         }
                     }
                     .frame(height: columnHeight, alignment: .center)
@@ -102,13 +117,19 @@ struct MenuBarLabel: View {
             }
             .font(.system(size: fontSize))
             .monospacedDigit()
+            .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
         )
         renderer.scale = displayScale
 
         guard let image = renderer.nsImage else { return nil }
-        image.isTemplate = true
+        image.isTemplate = false
         return image
     }
+}
+
+private struct MenuBarLine {
+    let provider: Provider
+    let text: String
 }
 
 enum MenuBarLayout {

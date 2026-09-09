@@ -1,5 +1,6 @@
 import Foundation
 import CoreTransferable
+import SwiftUI
 import UniformTypeIdentifiers
 
 enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
@@ -38,6 +39,15 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: "chevron.left.forwardslash.chevron.right"
         case .claude: "sparkle"
         case .chatgpt: "bubble.left.and.bubble.right"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .cursor: .purple
+        case .copilot: .blue
+        case .claude: .orange
+        case .chatgpt: .white
         }
     }
 
