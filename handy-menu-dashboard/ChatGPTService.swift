@@ -9,8 +9,6 @@ enum ChatGPTAuthenticationResult: Equatable {
 
 @Observable
 final class ChatGPTService {
-    typealias DataLoader = (URLRequest) async throws -> (Data, URLResponse)
-
     var isLoading = false
     var error: String?
     var isAuthenticated = false
@@ -24,7 +22,7 @@ final class ChatGPTService {
     private var cookieHeader: String?
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
-    private let dataLoader: DataLoader
+    private let dataLoader: UsageDataLoader
 
     static let browserUserAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
@@ -71,7 +69,7 @@ final class ChatGPTService {
 
     init(
         keychain: any KeychainStoring = KeychainStore(),
-        dataLoader: @escaping DataLoader = { try await URLSession.shared.data(for: $0) },
+        dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true
     ) {
         self.keychain = keychain

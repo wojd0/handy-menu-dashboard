@@ -35,6 +35,7 @@ final class ClaudeService {
     private var cookieHeader: String?
     private var refreshTask: Task<Void, Never>?
     private let keychain: any KeychainStoring
+    private let dataLoader: UsageDataLoader
 
     static let browserUserAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
@@ -92,11 +93,18 @@ final class ClaudeService {
         }
     }
 
-    init(keychain: any KeychainStoring = KeychainStore()) {
+    init(
+        keychain: any KeychainStoring = KeychainStore(),
+        dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
+        autoRefresh: Bool = true
+    ) {
         self.keychain = keychain
+        self.dataLoader = dataLoader
         isEnabled = (UserDefaults.standard.object(forKey: "claudeEnabled") as? Bool) ?? true
         loadCredentials()
-        startAutoRefresh()
+        if autoRefresh {
+            startAutoRefresh()
+        }
     }
 
     func saveCookies(_ cookies: [HTTPCookie]) {
@@ -209,7 +217,7 @@ final class ClaudeService {
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await dataLoader(request)
         } catch {
             throw .network
         }
