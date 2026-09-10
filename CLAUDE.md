@@ -29,26 +29,80 @@ Menu bar app using `MenuBarExtra` with `.window` style showing coding agent usag
 
 ### Data Flow
 
-Services (`CursorService`, `CopilotService`, `ClaudeService`, `ChatGPTService`) are `@Observable` classes created as `@State` in the `App` struct and passed as parameters to views — not via `@Environment`. All services auto-refresh every 3 minutes via background `Task` loops and store credentials in Keychain.
+The four `@Observable` services (`CursorService`, `CopilotService`, `ClaudeService`, `ChatGPTService`) are
+held in a `ServiceSet` created as `@State` in the `App` struct and passed as one parameter to views — not via
+`@Environment`. Each service is a thin shell: it decodes its provider's payload and applies it. Everything
+shared sits behind modules the shell depends on.
 
-### Business Logic
+Per-provider facts — display name, icon, accent, keychain key, error noun, preference keys, monetary label,
+sign-in blurb, credential policy, cookie harvest rule — are data on the `Provider` enum, not branches at
+call sites. `ServiceSet`'s subscript is the single dispatch point from a `Provider` to its service.
 
-**`UsageMath.swift`** contains all pure calculation and formatting functions and the JSON response structs. This is the right place for numeric/formatting logic — keep it side-effect free.
+See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that should not be re-litigated.
+
+### Shared modules
+
+- **`UsageSession`** — Owns the refresh envelope (`run(load:apply:unexpected:)`: the cookie preamble, the
+  loading flag, the staleness guard, the catch) and the credential lifecycle. Also owns `isEnabled` and
+  `menuBarDisplayMode`. Deliberately does **not** own the refresh loop — that would form a retain cycle a
+  `@MainActor deinit` cannot break.
+- **`RefreshLoop`** — The 180-second loop and its cancellation. Deliberately **not** `@Observable`: the macro
+  rewrites the stored task into a computed property, which makes `deinit` illegal.
+- **`UsageTransport` / `UsageRequest` / `HTTPOutcome` / `BrowserIdentity` / `CookieHeader`** — Request
+  construction and status classification as pure values, behind one seam with two adapters: `URLSession` in
+  production (`DefaultDataLoader.live`), a closure in tests. `AuthExpiredPolicy.github` adds 404 and the
+  `/login` path; every other provider uses `.standard`.
+- **`SessionTransition` / `UsageFailure`** — The failure-to-state rule as a pure reducer. Whether a provider
+  discards its credential on auth expiry is data on `Provider`, not a branch.
+- **`UsageReading` / `AmountStyle` / `DetailStyle`** — The single definition of percent, over-limit, the
+  menu-bar fragment and the dashboard detail string. Always dollars or credits, never cents.
+- **`UsageMath`** — Leaf formatting and generic percent maths only. It must not learn provider names again;
+  it still holds the four `Decodable` response structs.
+- **`ProviderPreferences`** — The only owner of the `<provider>Enabled` and `<provider>MenuBarShowPercent`
+  keys, derived from `Provider.rawValue`. `ProviderPreferencesTests` pins the derived strings against the
+  literals that shipped — a one-character drift would silently reset every user's saved settings.
+- **`CookieHarvest`** — The four sign-in harvest rules as testable data: start URL, path gate, domain match,
+  session-cookie rule, website-data domains.
+- **`LoginFlow`** — The reentrancy guard, retry latch and clear-then-reload recovery, lifted out of the
+  WebView coordinator. Its side effects are installed by the coordinator in `makeNSView`, not injected at init.
+- **`KeychainStoring` / `KeychainStore`** — Protocol + production implementation wrapping `SecItem*`. Tests
+  use `InMemoryKeychainStore`. Keys prefixed `com.wojd0.dashboard.*`, with migration from the legacy format.
+- **`PreferenceStoring`** — Same pattern for `UserDefaults`. Tests use `InMemoryPreferenceStore` so the suite
+  neither reads nor writes real user preferences.
 
 ### Services
-- **CursorService** — Fetches Cursor IDE team spend via `cursor.com/api/dashboard/get-team-spend`. Cookie-based auth (WebView login flow). Extracts `team_id` from cookies, fetches team spend, then identifies the current user by matching email from `/api/auth/me`.
-- **CopilotService** — Fetches GitHub Copilot credit quota via the undocumented GitHub web entitlement endpoint (`/github-copilot/chat/entitlement`). Cookie-based auth (WebView login flow).
-- **ClaudeService** — Fetches Claude.ai usage via `claude.ai/api/organizations/{orgId}/usage`. Cookie-based auth (WebView login). Org ID read from the `lastActiveOrg` cookie. Tracks two pools: **spend** (usage limit) and **cinder_cove** (Claude Code & Cowork credit). Supports three baselines (`usageLimit`, `credit`, `combined`) each with Dollars or Percent menu-bar display.
-- **ChatGPTService** — Fetches monthly ChatGPT credits from the current account's spend-control endpoint. Cookie-based auth (WebView login); refreshes the bearer token through the ChatGPT session endpoint and verifies it against the selected `_account` cookie.
-- **KeychainStoring** / **KeychainStore** — Protocol + production implementation wrapping macOS Security framework (`SecItem*` APIs). Injected into services; tests use `InMemoryKeychainStore`. All keys prefixed `com.wojd0.dashboard.*`. Includes automatic migration from legacy keychain format.
+
+- **CursorService** — Fetches usage via `cursor.com/api/usage-summary`, then resolves the display name once
+  from `/api/auth/me`. Stores cents; `reading` normalises to dollars.
+- **CopilotService** — Fetches credit quota via the undocumented GitHub web entitlement endpoint
+  (`/github-copilot/chat/entitlement`). Validates before persisting; an account with no quota is rejected.
+- **ClaudeService** — Fetches `claude.ai/api/organizations/{orgId}/usage`. Org ID comes from the
+  `lastActiveOrg` cookie, falling back to `/api/organizations`. Tracks two pools: **spend** (usage limit) and
+  **cinder_cove** (Claude Code & Cowork credit), with three baselines (`usageLimit`, `credit`, `combined`).
+- **ChatGPTService** — Fetches monthly credits from the account's spend-control endpoint. Refreshes the bearer
+  token through the session endpoint and verifies its account claim against the `_account` cookie.
+
+Cursor and Claude **retain** their stored cookie through a 401/403 so a transient block self-heals on the next
+tick; Copilot and ChatGPT **discard** it. This is deliberate and pinned by `SessionTransitionTests` — see
+`Provider.clearsCredentialOnAuthExpiry`.
 
 ### Views
-- **handy_menu_dashboardApp** — App entry point. `MenuBarExtra` shows usage summary; separate `Window("Settings", id: "settings")` opened via `openWindow`.
-- **DashboardView** — Main popover with usage cards for each service, settings gear, and quit button.
-- **UsageCardView** — Reusable card showing service name, percentage, detail text, and progress bar.
-- **UsageProgressBar** — Gradient progress bar (green→yellow→orange→red based on usage).
-- **SettingsView** — Settings window with per-service cards and WebView login flows. Each service has its own credits/dollars/percent menu-bar switch. Claude also has a 3-step baseline picker (Limit / Credit / Combined).
-- **CursorLoginView** — `WKWebView` wrapper for Cursor OAuth login and cookie extraction.
-- **CopilotLoginView** — `WKWebView` wrapper for GitHub login and session-cookie validation against the Copilot entitlement endpoint.
-- **ClaudeLoginView** — `WKWebView` wrapper for Claude login. Extracts `claude.ai` cookies after the user signs in and navigates away from `/login`.
-- **ChatGPTLoginView** — `WKWebView` wrapper for ChatGPT login. Extracts the split NextAuth session cookies and currently selected account cookie.
+
+- **handy_menu_dashboardApp** — App entry point. `MenuBarExtra` shows the usage summary; a separate
+  `Window("Settings", id: "settings")` is opened via `openWindow`. `MenuBarLabel` rasterises the fragments
+  through `ImageRenderer` — it must only read `menuBarText`, never `isLoading`, or every 3-minute refresh
+  re-renders the whole image.
+- **DashboardView** — Popover with a usage card per active provider, settings gear and quit button.
+- **UsageCardView** / **ClaudeUsageCardView** — Two deliberately different shapes: one headline percentage
+  plus a bar, versus Claude's two pool rows gated on `hasSpend`/`hasCredit`.
+- **UsageProgressBar** — Gradient progress bar (green→yellow→orange→red).
+- **SettingsView** — Reorderable provider cards plus the General section. Each card is one generic
+  `ProviderSettingsCard<Service, Extra>`; Claude's baseline picker passes through the `Extra` slot. The card is
+  **generic, not existential** — `@Bindable var service: any UsageDisplaying` does not compile.
+- **CursorLoginView** / **ClaudeLoginView** — Simple `WKWebView` sheets that harvest cookies and persist them
+  without validating. Both use `Provider.harvest`; Claude's rule gates on host only, not on leaving `/login`.
+- **ValidatingLoginView** / **ValidatingWebView** — One login sheet serving Copilot and ChatGPT: validates the
+  session before persisting, with an error banner, retry, and clear-then-reload recovery.
+
+**No test in the target touches `SettingsView`, `ProviderSettingsCard` or `ProviderDropDelegate`.** Changes to
+the settings layout or the drag-reorder loop can only be verified by running the app.

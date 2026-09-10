@@ -1,8 +1,7 @@
 # CONTEXT
 
 Domain language for handy-menu-dashboard. Architecture reviews and new code should use these
-terms exactly. Terms marked *(planned)* name modules from the agreed deepening plan that do not
-exist yet.
+terms exactly.
 
 ## Domain
 
@@ -53,7 +52,7 @@ so a transient Cloudflare 403 self-heals on the next tick) and `validatesBeforeP
 (Copilot and ChatGPT prove the session works before writing to the Keychain; Cursor and Claude
 currently do not).
 
-## Modules *(planned)*
+## Modules
 
 **UsageReading** — the single definition of percent, over-limit, the menu-bar fragment and the
 dashboard detail string. A `nonisolated Sendable` value. Formatting varies along two independent
