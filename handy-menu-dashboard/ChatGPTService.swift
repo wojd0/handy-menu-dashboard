@@ -42,7 +42,6 @@ final class ChatGPTService {
         set { session.errorMessage = newValue }
     }
 
-    static let websiteDataDomains = ["chatgpt.com", "openai.com"]
 
     var reading: UsageReading {
         UsageReading(

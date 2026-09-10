@@ -76,7 +76,7 @@ struct CopilotWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = BrowserIdentity.userAgent
-        webView.load(URLRequest(url: URL(string: "https://github.com/login")!))
+        webView.load(URLRequest(url: Provider.copilot.harvest.startURL))
         return webView
     }
 
@@ -121,19 +121,13 @@ struct CopilotWebView: NSViewRepresentable {
 
         private func extractCookiesIfNeeded(from webView: WKWebView) {
             guard !isAuthenticating else { return }
-            guard webView.url?.host?.hasSuffix("github.com") == true else { return }
+            let harvest = Provider.copilot.harvest
+            guard harvest.acceptsNavigation(to: webView.url) else { return }
 
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
                 guard let self, !self.isAuthenticating else { return }
-                let githubCookies = cookies.filter {
-                    $0.domain == "github.com" || $0.domain.hasSuffix(".github.com")
-                }
-                let hasSession = githubCookies.contains {
-                    ($0.name == "user_session" || $0.name == "private_mode_user_session")
-                        && !$0.value.isEmpty
-                }
-                guard hasSession else { return }
-                self.authenticate(githubCookies, from: webView)
+                guard let sessionCookies = harvest.sessionCookies(from: cookies) else { return }
+                self.authenticate(sessionCookies, from: webView)
             }
         }
 
@@ -165,13 +159,13 @@ struct CopilotWebView: NSViewRepresentable {
                     self.lastCookies = nil
                     self.parent.onAuthenticationError("Session expired. Please sign in again.")
                     WebAuthSession.clearWebsiteData(
-                        matching: CopilotService.websiteDataDomains,
+                        matching: Provider.copilot.harvest.websiteDataDomains,
                         in: webView.configuration.websiteDataStore
                     ) { [weak self, weak webView] in
                         Task { @MainActor in
                             guard let self, let webView else { return }
                             self.isAuthenticating = false
-                            webView.load(URLRequest(url: URL(string: "https://github.com/login")!))
+                            webView.load(URLRequest(url: Provider.copilot.harvest.startURL))
                         }
                     }
                 case .failure(let message):

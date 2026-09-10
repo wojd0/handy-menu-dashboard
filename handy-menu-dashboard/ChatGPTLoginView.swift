@@ -76,7 +76,7 @@ struct ChatGPTWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = BrowserIdentity.userAgent
-        webView.load(URLRequest(url: URL(string: "https://chatgpt.com/")!))
+        webView.load(URLRequest(url: Provider.chatgpt.harvest.startURL))
         return webView
     }
 
@@ -121,18 +121,13 @@ struct ChatGPTWebView: NSViewRepresentable {
 
         private func extractCookiesIfNeeded(from webView: WKWebView) {
             guard !isAuthenticating else { return }
-            guard webView.url?.host?.contains("chatgpt.com") == true else { return }
+            let harvest = Provider.chatgpt.harvest
+            guard harvest.acceptsNavigation(to: webView.url) else { return }
 
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
                 guard let self, !self.isAuthenticating else { return }
-                let chatGPTCookies = cookies.filter { $0.domain.contains("chatgpt.com") }
-                let hasSession = chatGPTCookies.contains {
-                    $0.name.hasPrefix("__Secure-next-auth.session-token")
-                }
-                let hasAccount = chatGPTCookies.contains { $0.name == "_account" }
-                guard hasSession, hasAccount else { return }
-
-                self.authenticate(chatGPTCookies, from: webView)
+                guard let sessionCookies = harvest.sessionCookies(from: cookies) else { return }
+                self.authenticate(sessionCookies, from: webView)
             }
         }
 
@@ -164,13 +159,13 @@ struct ChatGPTWebView: NSViewRepresentable {
                     self.lastCookies = nil
                     self.parent.onAuthenticationError("Session expired. Please sign in again.")
                     WebAuthSession.clearWebsiteData(
-                        matching: ChatGPTService.websiteDataDomains,
+                        matching: Provider.chatgpt.harvest.websiteDataDomains,
                         in: webView.configuration.websiteDataStore
                     ) { [weak self, weak webView] in
                         Task { @MainActor in
                             guard let self, let webView else { return }
                             self.isAuthenticating = false
-                            webView.load(URLRequest(url: URL(string: "https://chatgpt.com/")!))
+                            webView.load(URLRequest(url: Provider.chatgpt.harvest.startURL))
                         }
                     }
                 case .failure(let message):

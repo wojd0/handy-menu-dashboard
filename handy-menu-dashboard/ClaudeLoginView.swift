@@ -45,7 +45,7 @@ struct ClaudeWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = BrowserIdentity.userAgent
-        webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
+        webView.load(URLRequest(url: Provider.claude.harvest.startURL))
         return webView
     }
 
@@ -76,15 +76,15 @@ struct ClaudeWebView: NSViewRepresentable {
 
         private func extractCookiesIfNeeded(from webView: WKWebView) {
             guard !hasExtracted else { return }
-            guard webView.url?.host?.contains("claude.ai") == true else { return }
+            let harvest = Provider.claude.harvest
+            guard harvest.acceptsNavigation(to: webView.url) else { return }
 
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
                 guard let self, !self.hasExtracted else { return }
-                let claudeCookies = cookies.filter { $0.domain.contains("claude.ai") }
-                guard claudeCookies.contains(where: { $0.name == "sessionKey" }) else { return }
+                guard let sessionCookies = harvest.sessionCookies(from: cookies) else { return }
                 self.hasExtracted = true
                 Task { @MainActor in
-                    self.parent.onCookiesExtracted(claudeCookies)
+                    self.parent.onCookiesExtracted(sessionCookies)
                 }
             }
         }

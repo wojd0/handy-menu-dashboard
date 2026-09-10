@@ -42,7 +42,6 @@ final class CopilotService {
         set { session.errorMessage = newValue }
     }
 
-    static let websiteDataDomains = ["github.com"]
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
     static let noQuotaMessage = "No Copilot credit quota is available for this account."
     static let legacyKeys: [KeychainKey] = [.copilotUsername, .copilotPAT, .copilotEntitlement]
