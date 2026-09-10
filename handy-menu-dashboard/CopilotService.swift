@@ -9,9 +9,6 @@ enum CopilotAuthenticationResult: Equatable {
 
 @Observable
 final class CopilotService {
-    var isLoading = false
-    var error: String?
-    var isAuthenticated = false
     var isEnabled = true
 
     var creditsUsed: Double = 0
@@ -19,14 +16,26 @@ final class CopilotService {
     var creditsRemaining: Double = 0
     var isUnlimited = false
 
-    private var cookieHeader: String?
-    private let refreshLoop = RefreshLoop()
-    private let keychain: any KeychainStoring
-    private let transport: UsageTransport
+    @ObservationIgnored private let session: UsageSession
+    @ObservationIgnored private let refreshLoop = RefreshLoop()
+    @ObservationIgnored private let transport: UsageTransport
+
+    var isLoading: Bool { session.isLoading }
+
+    var isAuthenticated: Bool {
+        get { session.isAuthenticated }
+        set { session.isAuthenticated = newValue }
+    }
+
+    var error: String? {
+        get { session.errorMessage }
+        set { session.errorMessage = newValue }
+    }
 
     static let websiteDataDomains = ["github.com"]
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
     static let noQuotaMessage = "No Copilot credit quota is available for this account."
+    static let legacyKeys: [KeychainKey] = [.copilotUsername, .copilotPAT, .copilotEntitlement]
 
     var reading: UsageReading {
         UsageReading(
@@ -64,11 +73,11 @@ final class CopilotService {
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true
     ) {
-        self.keychain = keychain
+        session = UsageSession(provider: .copilot, keychain: keychain)
         transport = UsageTransport(dataLoader: dataLoader, policy: .github)
         isEnabled = (UserDefaults.standard.object(forKey: "copilotEnabled") as? Bool) ?? true
-        removeLegacyCredentials()
-        loadCredentials()
+        session.purgeLegacy(Self.legacyKeys)
+        session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()
         }
@@ -88,20 +97,18 @@ final class CopilotService {
             return .failure(message)
         }
 
-        isLoading = true
+        session.isLoading = true
         error = nil
-        defer { isLoading = false }
+        defer { session.isLoading = false }
 
         do {
             let entitlement = try await fetchEntitlement(cookieHeader: header)
             let snapshot = try makeSnapshot(from: entitlement)
-            keychain.saveString(key: .copilotCookies, value: header)
-            cookieHeader = header
+            session.persist(header)
             apply(snapshot)
-            isAuthenticated = true
             return .authenticated
         } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
+            session.absorb(kind)
             switch kind {
             case .authExpired:
                 return .staleSession
@@ -116,10 +123,8 @@ final class CopilotService {
     }
 
     func clearCredentials() async {
-        keychain.delete(key: .copilotCookies)
-        removeLegacyCredentials()
-        cookieHeader = nil
-        isAuthenticated = false
+        session.discardCredential()
+        session.purgeLegacy(Self.legacyKeys)
         creditsUsed = 0
         creditsTotal = 0
         creditsRemaining = 0
@@ -129,23 +134,14 @@ final class CopilotService {
     }
 
     func refresh() async {
-        guard let cookieHeader, !cookieHeader.isEmpty else { return }
-
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-
-        do {
-            let entitlement = try await fetchEntitlement(cookieHeader: cookieHeader)
-            let snapshot = try makeSnapshot(from: entitlement)
-            guard self.cookieHeader == cookieHeader else { return }
-            apply(snapshot)
-            isAuthenticated = true
-        } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
-        } catch {
-            self.error = "Invalid response from GitHub"
-        }
+        await session.run(
+            load: { cookie in
+                let entitlement = try await self.fetchEntitlement(cookieHeader: cookie)
+                return try self.makeSnapshot(from: entitlement)
+            },
+            apply: { self.apply($0) },
+            unexpected: "Invalid response from GitHub"
+        )
     }
 
     private func fetchEntitlement(cookieHeader: String) async throws -> CopilotEntitlementResponse {
@@ -190,32 +186,6 @@ final class CopilotService {
         creditsTotal = snapshot.total
         creditsRemaining = snapshot.remaining
         isUnlimited = snapshot.unlimited
-    }
-
-    private func handleFailure(_ kind: UsageFailure.Kind) {
-        let outcome = SessionTransition.apply(
-            UsageFailure(kind: kind, provider: .copilot),
-            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
-        )
-        isAuthenticated = outcome.state.isAuthenticated
-        error = outcome.state.errorMessage
-        if outcome.discardsCredential {
-            keychain.delete(key: .copilotCookies)
-            cookieHeader = nil
-        }
-    }
-
-    private func removeLegacyCredentials() {
-        keychain.delete(key: .copilotUsername)
-        keychain.delete(key: .copilotPAT)
-        keychain.delete(key: .copilotEntitlement)
-    }
-
-    private func loadCredentials() {
-        if let header = keychain.loadString(key: .copilotCookies), !header.isEmpty {
-            cookieHeader = header
-            isAuthenticated = true
-        }
     }
 
     private func startAutoRefresh() {
