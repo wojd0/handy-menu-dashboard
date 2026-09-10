@@ -10,7 +10,12 @@ struct ClaudeUsageTests {
         keychain: any KeychainStoring = InMemoryKeychainStore(),
         dataLoader: @escaping UsageDataLoader = { _ in throw NetworkFailure() }
     ) -> ClaudeService {
-        let service = ClaudeService(keychain: keychain, dataLoader: dataLoader, autoRefresh: false)
+        let service = ClaudeService(
+            keychain: keychain,
+            dataLoader: dataLoader,
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
         service.isAuthenticated = authenticated
         service.isEnabled = true
         return service

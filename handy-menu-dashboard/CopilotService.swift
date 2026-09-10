@@ -9,7 +9,17 @@ enum CopilotAuthenticationResult: Equatable {
 
 @Observable
 final class CopilotService {
-    var isEnabled = true
+    var isEnabled: Bool {
+        get { session.isEnabled }
+        set { session.isEnabled = newValue }
+    }
+
+    var menuBarDisplayMode: MenuBarDisplayMode {
+        get { session.menuBarDisplayMode }
+        set { session.menuBarDisplayMode = newValue }
+    }
+
+    var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
 
     var creditsUsed: Double = 0
     var creditsTotal: Double = 0
@@ -71,11 +81,11 @@ final class CopilotService {
     init(
         keychain: any KeychainStoring = KeychainStore(),
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
-        autoRefresh: Bool = true
+        autoRefresh: Bool = true,
+        preferences: any PreferenceStoring = UserDefaults.standard
     ) {
-        session = UsageSession(provider: .copilot, keychain: keychain)
+        session = UsageSession(provider: .copilot, keychain: keychain, preferences: preferences)
         transport = UsageTransport(dataLoader: dataLoader, policy: .github)
-        isEnabled = (UserDefaults.standard.object(forKey: "copilotEnabled") as? Bool) ?? true
         session.purgeLegacy(Self.legacyKeys)
         session.loadStoredCredential()
         if autoRefresh {

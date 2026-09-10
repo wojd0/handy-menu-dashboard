@@ -16,11 +16,6 @@ struct SettingsView: View {
     @State private var showCopilotLogin = false
     @State private var showClaudeLogin = false
     @State private var showChatGPTLogin = false
-    @AppStorage("cursorMenuBarShowPercent") private var cursorDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("copilotMenuBarShowPercent") private var copilotDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("claudeMenuBarShowPercent") private var claudeDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
-    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @AppStorage("menuBarInserted") private var menuBarInserted = true
     @State private var launchAtLogin = false
@@ -183,9 +178,6 @@ struct SettingsView: View {
                     Toggle("", isOn: $cursorService.isEnabled)
                         .toggleStyle(.switch)
                         .labelsHidden()
-                        .onChange(of: cursorService.isEnabled) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "cursorEnabled")
-                        }
                 }
             }
 
@@ -204,7 +196,7 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $cursorDisplayMode) {
+                    Picker("", selection: $cursorService.menuBarDisplayMode) {
                         Text("Dollars").tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
                         Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
@@ -238,9 +230,6 @@ struct SettingsView: View {
                     Toggle("", isOn: $copilotService.isEnabled)
                         .toggleStyle(.switch)
                         .labelsHidden()
-                        .onChange(of: copilotService.isEnabled) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "copilotEnabled")
-                        }
                 }
             }
 
@@ -259,7 +248,7 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $copilotDisplayMode) {
+                    Picker("", selection: $copilotService.menuBarDisplayMode) {
                         Text("Credits").tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
                         Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
@@ -293,9 +282,6 @@ struct SettingsView: View {
                     Toggle("", isOn: $claudeService.isEnabled)
                         .toggleStyle(.switch)
                         .labelsHidden()
-                        .onChange(of: claudeService.isEnabled) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "claudeEnabled")
-                        }
                 }
             }
 
@@ -313,7 +299,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Baseline")
                         .font(.callout)
-                    Picker("", selection: $claudeBaseline) {
+                    Picker("", selection: $claudeService.baseline) {
                         ForEach(ClaudeBaseline.allCases) { baseline in
                             Text(baseline.label).tag(baseline)
                         }
@@ -326,7 +312,7 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $claudeDisplayMode) {
+                    Picker("", selection: $claudeService.menuBarDisplayMode) {
                         Text("Dollars").tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
                         Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
@@ -360,9 +346,6 @@ struct SettingsView: View {
                     Toggle("", isOn: $chatGPTService.isEnabled)
                         .toggleStyle(.switch)
                         .labelsHidden()
-                        .onChange(of: chatGPTService.isEnabled) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "chatgptEnabled")
-                        }
                 }
             }
 
@@ -381,7 +364,7 @@ struct SettingsView: View {
                     Text("Menu Bar Unit")
                         .font(.callout)
                     Spacer()
-                    Picker("", selection: $chatGPTDisplayMode) {
+                    Picker("", selection: $chatGPTService.menuBarDisplayMode) {
                         Text("Credits").tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
                         Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)

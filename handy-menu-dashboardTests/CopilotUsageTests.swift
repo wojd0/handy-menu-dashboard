@@ -54,7 +54,8 @@ struct CopilotUsageTests {
                     json: entitlementJSON(total: 0, used: 42, remaining: 0, unlimited: true)
                 )
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -76,7 +77,8 @@ struct CopilotUsageTests {
                 #expect(keychain.loadString(key: .copilotCookies) == nil)
                 return try response(for: request, data: samplePayload)
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -102,7 +104,8 @@ struct CopilotUsageTests {
                 requestCount += 1
                 return (Data(), URLResponse())
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
         let cookie = HTTPCookie(properties: [
             .domain: ".github.com",
@@ -126,7 +129,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, status: 404, json: [:])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -147,7 +151,8 @@ struct CopilotUsageTests {
                     json: entitlementJSON(total: 0, used: 0, remaining: 0, hasQuota: false)
                 )
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -163,7 +168,8 @@ struct CopilotUsageTests {
         let service = CopilotService(
             keychain: keychain,
             dataLoader: { _ in throw NetworkFailure() },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -184,7 +190,8 @@ struct CopilotUsageTests {
                     json: entitlementJSON(total: 1_000, used: 125, remaining: nil)
                 )
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -205,7 +212,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, status: 401, json: [:])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -223,7 +231,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, status: 429, json: [:])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -241,7 +250,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, json: ["unexpected": true])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -257,7 +267,7 @@ struct CopilotUsageTests {
         keychain.saveString(key: .copilotPAT, value: "github_pat_test")
         keychain.saveString(key: .copilotEntitlement, value: "300")
 
-        let service = CopilotService(keychain: keychain, autoRefresh: false)
+        let service = CopilotService(keychain: keychain, autoRefresh: false, preferences: InMemoryPreferenceStore())
 
         #expect(!service.isAuthenticated)
         #expect(keychain.loadString(key: .copilotUsername) == nil)
@@ -271,7 +281,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, json: entitlementJSON(total: 1_000, used: 400, remaining: 250))
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -289,7 +300,8 @@ struct CopilotUsageTests {
             dataLoader: { request in
                 try response(for: request, json: entitlementJSON(total: 100, used: 125, remaining: 0))
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -300,7 +312,11 @@ struct CopilotUsageTests {
     }
 
     private func makeService() -> CopilotService {
-        CopilotService(keychain: InMemoryKeychainStore(), autoRefresh: false)
+        CopilotService(
+            keychain: InMemoryKeychainStore(),
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
     }
 
     private func makeCookies() -> [HTTPCookie] {

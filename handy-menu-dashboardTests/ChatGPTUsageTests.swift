@@ -131,7 +131,8 @@ struct ChatGPTUsageTests {
                     ]
                 )
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -151,7 +152,8 @@ struct ChatGPTUsageTests {
             dataLoader: { request in
                 try response(for: request, status: 401, json: [:])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -168,7 +170,8 @@ struct ChatGPTUsageTests {
         let service = ChatGPTService(
             keychain: keychain,
             dataLoader: { _ in throw NetworkFailure() },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         let result = await service.authenticate(with: makeCookies())
@@ -208,7 +211,8 @@ struct ChatGPTUsageTests {
                     ]
                 )
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -235,7 +239,8 @@ struct ChatGPTUsageTests {
             dataLoader: { request in
                 try response(for: request, json: ["accessToken": token])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -255,7 +260,8 @@ struct ChatGPTUsageTests {
         let service = ChatGPTService(
             keychain: keychain,
             dataLoader: { _ in throw NetworkFailure() },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -274,7 +280,8 @@ struct ChatGPTUsageTests {
             dataLoader: { request in
                 try response(for: request, status: 429, json: [:])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -293,7 +300,8 @@ struct ChatGPTUsageTests {
             dataLoader: { request in
                 try response(for: request, json: ["unexpected": true])
             },
-            autoRefresh: false
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
         )
 
         await service.refresh()
@@ -303,7 +311,11 @@ struct ChatGPTUsageTests {
     }
 
     private func makeService() -> ChatGPTService {
-        ChatGPTService(keychain: InMemoryKeychainStore(), autoRefresh: false)
+        ChatGPTService(
+            keychain: InMemoryKeychainStore(),
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
     }
 
     private func makeJWT(accountID: String) -> String {

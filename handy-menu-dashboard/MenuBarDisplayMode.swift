@@ -7,15 +7,8 @@ enum MenuBarDisplayMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    static let preferenceKeys = [
-        "cursorMenuBarShowPercent",
-        "copilotMenuBarShowPercent",
-        "claudeMenuBarShowPercent",
-        "chatgptMenuBarShowPercent"
-    ]
-
-    static func migrateLegacyPreferences(in defaults: UserDefaults = .standard) {
-        for key in preferenceKeys {
+    static func migrateLegacyPreferences(in defaults: any PreferenceStoring = UserDefaults.standard) {
+        for key in Provider.allCases.map(\.displayModeKey) {
             guard let storedValue = defaults.object(forKey: key) else { continue }
 
             if let rawValue = storedValue as? String,

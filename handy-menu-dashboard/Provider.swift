@@ -37,6 +37,10 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var enabledKey: String { "\(rawValue)Enabled" }
+
+    var displayModeKey: String { "\(rawValue)MenuBarShowPercent" }
+
     var keychainKey: KeychainKey {
         switch self {
         case .cursor: .cursorCookies

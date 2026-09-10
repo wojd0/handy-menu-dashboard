@@ -19,7 +19,27 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 
 @Observable
 final class ClaudeService {
-    var isEnabled = true
+    var isEnabled: Bool {
+        get { session.isEnabled }
+        set { session.isEnabled = newValue }
+    }
+
+    var menuBarDisplayMode: MenuBarDisplayMode {
+        get { session.menuBarDisplayMode }
+        set { session.menuBarDisplayMode = newValue }
+    }
+
+    var baseline: ClaudeBaseline {
+        get { storedBaseline }
+        set {
+            storedBaseline = newValue
+            ProviderPreferences.setClaudeBaseline(newValue, in: preferences)
+        }
+    }
+
+    var menuBarText: String {
+        menuBarFragment(baseline: baseline, displayMode: menuBarDisplayMode)
+    }
 
     var spendUsedDollars: Double = 0
     var spendLimitDollars: Double = 0
@@ -29,6 +49,9 @@ final class ClaudeService {
     var hasSpend = false
     var hasCredit = false
 
+    private var storedBaseline: ClaudeBaseline
+
+    @ObservationIgnored private let preferences: any PreferenceStoring
     @ObservationIgnored private let session: UsageSession
     @ObservationIgnored private let refreshLoop = RefreshLoop()
     @ObservationIgnored private let transport: UsageTransport
@@ -86,11 +109,13 @@ final class ClaudeService {
     init(
         keychain: any KeychainStoring = KeychainStore(),
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
-        autoRefresh: Bool = true
+        autoRefresh: Bool = true,
+        preferences: any PreferenceStoring = UserDefaults.standard
     ) {
-        session = UsageSession(provider: .claude, keychain: keychain)
+        self.preferences = preferences
+        storedBaseline = ProviderPreferences.claudeBaseline(in: preferences)
+        session = UsageSession(provider: .claude, keychain: keychain, preferences: preferences)
         transport = UsageTransport(dataLoader: dataLoader)
-        isEnabled = (UserDefaults.standard.object(forKey: "claudeEnabled") as? Bool) ?? true
         session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()

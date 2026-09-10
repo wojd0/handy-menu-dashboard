@@ -3,7 +3,17 @@ import Observation
 
 @Observable
 final class CursorService {
-    var isEnabled = true
+    var isEnabled: Bool {
+        get { session.isEnabled }
+        set { session.isEnabled = newValue }
+    }
+
+    var menuBarDisplayMode: MenuBarDisplayMode {
+        get { session.menuBarDisplayMode }
+        set { session.menuBarDisplayMode = newValue }
+    }
+
+    var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
     var spendCents: Int = 0
     var monthlyLimitDollars: Int = 0
     var isUnlimited = false
@@ -68,11 +78,11 @@ final class CursorService {
     init(
         keychain: any KeychainStoring = KeychainStore(),
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
-        autoRefresh: Bool = true
+        autoRefresh: Bool = true,
+        preferences: any PreferenceStoring = UserDefaults.standard
     ) {
-        session = UsageSession(provider: .cursor, keychain: keychain)
+        session = UsageSession(provider: .cursor, keychain: keychain, preferences: preferences)
         transport = UsageTransport(dataLoader: dataLoader)
-        isEnabled = (UserDefaults.standard.object(forKey: "cursorEnabled") as? Bool) ?? true
         session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()

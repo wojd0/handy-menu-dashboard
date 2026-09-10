@@ -11,11 +11,40 @@ final class UsageSession {
 
     @ObservationIgnored private(set) var cookieHeader: String?
     @ObservationIgnored private let keychain: any KeychainStoring
+    @ObservationIgnored private let preferences: any PreferenceStoring
 
-    init(provider: Provider, keychain: any KeychainStoring) {
+    private var storedEnabled: Bool
+    private var storedDisplayMode: MenuBarDisplayMode
+
+    init(
+        provider: Provider,
+        keychain: any KeychainStoring,
+        preferences: any PreferenceStoring = UserDefaults.standard
+    ) {
         self.provider = provider
         self.keychain = keychain
+        self.preferences = preferences
+        storedEnabled = ProviderPreferences.isEnabled(provider, in: preferences)
+        storedDisplayMode = ProviderPreferences.displayMode(for: provider, in: preferences)
     }
+
+    var isEnabled: Bool {
+        get { storedEnabled }
+        set {
+            storedEnabled = newValue
+            ProviderPreferences.setEnabled(newValue, for: provider, in: preferences)
+        }
+    }
+
+    var menuBarDisplayMode: MenuBarDisplayMode {
+        get { storedDisplayMode }
+        set {
+            storedDisplayMode = newValue
+            ProviderPreferences.setDisplayMode(newValue, for: provider, in: preferences)
+        }
+    }
+
+    var isActive: Bool { isAuthenticated && isEnabled }
 
     func loadStoredCredential() {
         guard let header = keychain.loadString(key: provider.keychainKey), !header.isEmpty else { return }

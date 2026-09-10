@@ -248,7 +248,12 @@ struct CursorUsageTests {
         keychain: any KeychainStoring = InMemoryKeychainStore(),
         dataLoader: @escaping UsageDataLoader = { _ in throw NetworkFailure() }
     ) -> CursorService {
-        CursorService(keychain: keychain, dataLoader: dataLoader, autoRefresh: false)
+        CursorService(
+            keychain: keychain,
+            dataLoader: dataLoader,
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
     }
 
     private func makeAuthenticatedService(

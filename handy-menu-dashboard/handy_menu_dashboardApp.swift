@@ -48,11 +48,6 @@ struct MenuBarLabel: View {
     var copilotService: CopilotService
     var claudeService: ClaudeService
     var chatGPTService: ChatGPTService
-    @AppStorage("cursorMenuBarShowPercent") private var cursorDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("copilotMenuBarShowPercent") private var copilotDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("claudeMenuBarShowPercent") private var claudeDisplayMode = MenuBarDisplayMode.monetary
-    @AppStorage("claudeMenuBarBaseline") private var claudeBaseline = ClaudeBaseline.usageLimit
-    @AppStorage("chatgptMenuBarShowPercent") private var chatGPTDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
@@ -76,13 +71,13 @@ struct MenuBarLabel: View {
     private func fragment(for provider: Provider) -> String {
         switch provider {
         case .cursor:
-            cursorService.menuBarFragment(displayMode: cursorDisplayMode)
+            cursorService.menuBarText
         case .copilot:
-            copilotService.menuBarFragment(displayMode: copilotDisplayMode)
+            copilotService.menuBarText
         case .claude:
-            claudeService.menuBarFragment(baseline: claudeBaseline, displayMode: claudeDisplayMode)
+            claudeService.menuBarText
         case .chatgpt:
-            chatGPTService.menuBarFragment(displayMode: chatGPTDisplayMode)
+            chatGPTService.menuBarText
         }
     }
 
