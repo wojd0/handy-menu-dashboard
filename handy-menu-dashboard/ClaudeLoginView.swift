@@ -44,7 +44,7 @@ struct ClaudeWebView: NSViewRepresentable {
         config.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        webView.customUserAgent = ClaudeService.browserUserAgent
+        webView.customUserAgent = BrowserIdentity.userAgent
         webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
         return webView
     }

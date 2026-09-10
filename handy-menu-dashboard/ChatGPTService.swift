@@ -22,11 +22,8 @@ final class ChatGPTService {
     private var cookieHeader: String?
     private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
-    private let dataLoader: UsageDataLoader
+    private let transport: UsageTransport
 
-    static let browserUserAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
     static let websiteDataDomains = ["chatgpt.com", "openai.com"]
 
     var percentUsed: Double {
@@ -73,7 +70,7 @@ final class ChatGPTService {
         autoRefresh: Bool = true
     ) {
         self.keychain = keychain
-        self.dataLoader = dataLoader
+        transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "chatgptEnabled") as? Bool) ?? true
         loadCredentials()
         if autoRefresh {
@@ -82,8 +79,8 @@ final class ChatGPTService {
     }
 
     func authenticate(with cookies: [HTTPCookie]) async -> ChatGPTAuthenticationResult {
-        let header = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-        guard !header.isEmpty, extractCookieValue(named: "_account", from: header) != nil else {
+        let header = CookieHeader.header(from: cookies)
+        guard !header.isEmpty, CookieHeader.value(named: "_account", in: header) != nil else {
             let message = "Invalid response from ChatGPT"
             error = message
             return .failure(message)
@@ -186,7 +183,7 @@ final class ChatGPTService {
     }
 
     private func currentAccountID(from cookieHeader: String) throws -> String {
-        guard let accountID = extractCookieValue(named: "_account", from: cookieHeader),
+        guard let accountID = CookieHeader.value(named: "_account", in: cookieHeader),
               !accountID.isEmpty else {
             throw UsageFailure.Kind.invalidResponse
         }
@@ -194,7 +191,7 @@ final class ChatGPTService {
     }
 
     private func fetchAccessToken(cookieHeader: String) async throws -> String {
-        let (data, _) = try await performRequest(
+        let data = try await request(
             url: "https://chatgpt.com/api/auth/session",
             cookieHeader: cookieHeader
         )
@@ -219,7 +216,7 @@ final class ChatGPTService {
     ) async throws -> ChatGPTUsageResponse {
         let path = "https://chatgpt.com/backend-api/accounts/\(accountID)"
             + "/spend-controls/current-user/monthly-usage"
-        let (data, _) = try await performRequest(
+        let data = try await request(
             url: path,
             cookieHeader: cookieHeader,
             accessToken: accessToken,
@@ -242,56 +239,22 @@ final class ChatGPTService {
         limitMode = response.effectiveMonthlyLimit.limitMode
     }
 
-    private func performRequest(
+    private func request(
         url: String,
         cookieHeader: String,
         accessToken: String? = nil,
         accountID: String? = nil
-    ) async throws -> (Data, URLResponse) {
-        guard let requestURL = URL(string: url) else {
-            throw UsageFailure.Kind.invalidResponse
-        }
-
-        var request = URLRequest(url: requestURL)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
+    ) async throws(UsageFailure.Kind) -> Data {
+        var headers = ["Accept": "application/json"]
         if let accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            headers["Authorization"] = "Bearer \(accessToken)"
         }
         if let accountID {
-            request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
+            headers["ChatGPT-Account-ID"] = accountID
         }
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await dataLoader(request)
-        } catch {
-            throw UsageFailure.Kind.network
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw UsageFailure.Kind.invalidResponse
-        }
-        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            throw UsageFailure.Kind.authExpired
-        }
-        guard httpResponse.statusCode == 200 else {
-            throw UsageFailure.Kind.httpError(httpResponse.statusCode)
-        }
-        return (data, response)
-    }
-
-    private func extractCookieValue(named name: String, from cookieHeader: String) -> String? {
-        for pair in cookieHeader.components(separatedBy: ";") {
-            let parts = pair.trimmingCharacters(in: .whitespaces).split(separator: "=", maxSplits: 1)
-            if parts.count == 2, parts[0] == name {
-                return String(parts[1])
-            }
-        }
-        return nil
+        return try await transport.data(
+            for: UsageRequest(url: url, cookieHeader: cookieHeader, headers: headers)
+        )
     }
 
     private func handleFailure(_ kind: UsageFailure.Kind) {

@@ -75,7 +75,7 @@ struct CopilotWebView: NSViewRepresentable {
         let configuration = Self.makeConfiguration()
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
-        webView.customUserAgent = CopilotService.browserUserAgent
+        webView.customUserAgent = BrowserIdentity.userAgent
         webView.load(URLRequest(url: URL(string: "https://github.com/login")!))
         return webView
     }

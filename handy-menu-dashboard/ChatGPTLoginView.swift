@@ -75,7 +75,7 @@ struct ChatGPTWebView: NSViewRepresentable {
         let configuration = Self.makeConfiguration()
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
-        webView.customUserAgent = ChatGPTService.browserUserAgent
+        webView.customUserAgent = BrowserIdentity.userAgent
         webView.load(URLRequest(url: URL(string: "https://chatgpt.com/")!))
         return webView
     }

@@ -16,11 +16,7 @@ final class CursorService {
     private var cookieHeader: String?
     private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
-    private let dataLoader: UsageDataLoader
-
-    static let browserUserAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
+    private let transport: UsageTransport
 
     var spendFormatted: String {
         UsageMath.formatCentsAsDollars(spendCents)
@@ -73,7 +69,7 @@ final class CursorService {
         autoRefresh: Bool = true
     ) {
         self.keychain = keychain
-        self.dataLoader = dataLoader
+        transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "cursorEnabled") as? Bool) ?? true
         loadCredentials()
         if autoRefresh {
@@ -82,7 +78,7 @@ final class CursorService {
     }
 
     func saveCookies(_ cookies: [HTTPCookie]) {
-        let header = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return }
         keychain.saveString(key: .cursorCookies, value: header)
         cookieHeader = header
@@ -133,44 +129,17 @@ final class CursorService {
     }
 
     private func fetchUsageSummary(cookie: String) async throws -> CursorUsageSummaryResponse {
-        let (data, _) = try await performRequest(url: "https://cursor.com/api/usage-summary", cookie: cookie)
+        let data = try await transport.data(
+            for: UsageRequest(url: "https://cursor.com/api/usage-summary", cookieHeader: cookie)
+        )
         return try JSONDecoder().decode(CursorUsageSummaryResponse.self, from: data)
     }
 
     private func fetchMe(cookie: String) async throws -> AuthMeResponse {
-        let (data, _) = try await performRequest(url: "https://www.cursor.com/api/auth/me", cookie: cookie)
+        let data = try await transport.data(
+            for: UsageRequest(url: "https://www.cursor.com/api/auth/me", cookieHeader: cookie)
+        )
         return try JSONDecoder().decode(AuthMeResponse.self, from: data)
-    }
-
-    private func performRequest(
-        url: String,
-        cookie: String
-    ) async throws(UsageFailure.Kind) -> (Data, URLResponse) {
-        var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = "GET"
-        request.setValue(cookie, forHTTPHeaderField: "Cookie")
-        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await dataLoader(request)
-        } catch {
-            throw .network
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .invalidResponse
-        }
-
-        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            throw .authExpired
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            throw .httpError(httpResponse.statusCode)
-        }
-
-        return (data, response)
     }
 
     private func handleFailure(_ kind: UsageFailure.Kind) {

@@ -91,7 +91,7 @@ struct CopilotUsageTests {
         #expect(requests[0].url == CopilotService.entitlementURL)
         #expect(requests[0].value(forHTTPHeaderField: "Cookie")?.contains("user_session=test-session") == true)
         #expect(requests[0].value(forHTTPHeaderField: "Accept") == "application/json")
-        #expect(requests[0].value(forHTTPHeaderField: "User-Agent") == CopilotService.browserUserAgent)
+        #expect(requests[0].value(forHTTPHeaderField: "User-Agent") == BrowserIdentity.userAgent)
     }
 
     @Test func authenticationRequiresGitHubSessionCookie() async {

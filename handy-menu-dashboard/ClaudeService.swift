@@ -35,11 +35,7 @@ final class ClaudeService {
     private var cookieHeader: String?
     private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
-    private let dataLoader: UsageDataLoader
-
-    static let browserUserAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
+    private let transport: UsageTransport
 
     var combinedUsedDollars: Double { spendUsedDollars + creditUsedDollars }
     var combinedLimitDollars: Double { spendLimitDollars + creditLimitDollars }
@@ -99,7 +95,7 @@ final class ClaudeService {
         autoRefresh: Bool = true
     ) {
         self.keychain = keychain
-        self.dataLoader = dataLoader
+        transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "claudeEnabled") as? Bool) ?? true
         loadCredentials()
         if autoRefresh {
@@ -108,7 +104,7 @@ final class ClaudeService {
     }
 
     func saveCookies(_ cookies: [HTTPCookie]) {
-        let header = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return }
         keychain.saveString(key: .claudeCookies, value: header)
         cookieHeader = header
@@ -151,13 +147,10 @@ final class ClaudeService {
     }
 
     private func resolveOrgId(cookieHeader: String) async throws -> String {
-        if let orgId = extractCookieValue(named: "lastActiveOrg", from: cookieHeader) {
+        if let orgId = CookieHeader.value(named: "lastActiveOrg", in: cookieHeader) {
             return orgId
         }
-        let (data, _) = try await performRequest(
-            url: "https://claude.ai/api/organizations",
-            cookieHeader: cookieHeader
-        )
+        let data = try await request(url: "https://claude.ai/api/organizations", cookieHeader: cookieHeader)
         struct OrgItem: Decodable { let uuid: String }
         let orgs = try JSONDecoder().decode([OrgItem].self, from: data)
         guard let first = orgs.first else { throw UsageFailure.Kind.invalidResponse }
@@ -165,7 +158,7 @@ final class ClaudeService {
     }
 
     private func fetchUsage(orgId: String, cookieHeader: String) async throws -> ClaudeUsageResponse {
-        let (data, _) = try await performRequest(
+        let data = try await request(
             url: "https://claude.ai/api/organizations/\(orgId)/usage",
             cookieHeader: cookieHeader
         )
@@ -195,46 +188,14 @@ final class ClaudeService {
         isAuthenticated = true
     }
 
-    private func extractCookieValue(named name: String, from cookieHeader: String) -> String? {
-        for pair in cookieHeader.components(separatedBy: "; ") {
-            let parts = pair.split(separator: "=", maxSplits: 1)
-            if parts.count == 2 && parts[0] == name {
-                return String(parts[1])
-            }
-        }
-        return nil
-    }
-
-    private func performRequest(
-        url: String,
-        cookieHeader: String
-    ) async throws(UsageFailure.Kind) -> (Data, URLResponse) {
-        var request = URLRequest(url: URL(string: url)!)
-        request.httpMethod = "GET"
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue("web_claude_ai", forHTTPHeaderField: "anthropic-client-platform")
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await dataLoader(request)
-        } catch {
-            throw .network
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .invalidResponse
-        }
-
-        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            throw .authExpired
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            throw .httpError(httpResponse.statusCode)
-        }
-
-        return (data, response)
+    private func request(url: String, cookieHeader: String) async throws(UsageFailure.Kind) -> Data {
+        try await transport.data(
+            for: UsageRequest(
+                url: url,
+                cookieHeader: cookieHeader,
+                headers: ["anthropic-client-platform": "web_claude_ai"]
+            )
+        )
     }
 
     private func handleFailure(_ kind: UsageFailure.Kind) {

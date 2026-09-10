@@ -22,11 +22,8 @@ final class CopilotService {
     private var cookieHeader: String?
     private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
-    private let dataLoader: UsageDataLoader
+    private let transport: UsageTransport
 
-    static let browserUserAgent =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-        + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
     static let websiteDataDomains = ["github.com"]
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
     static let noQuotaMessage = "No Copilot credit quota is available for this account."
@@ -79,7 +76,7 @@ final class CopilotService {
         autoRefresh: Bool = true
     ) {
         self.keychain = keychain
-        self.dataLoader = dataLoader
+        transport = UsageTransport(dataLoader: dataLoader, policy: .github)
         isEnabled = (UserDefaults.standard.object(forKey: "copilotEnabled") as? Bool) ?? true
         removeLegacyCredentials()
         loadCredentials()
@@ -95,7 +92,7 @@ final class CopilotService {
         let hasSession = githubCookies.contains {
             ($0.name == "user_session" || $0.name == "private_mode_user_session") && !$0.value.isEmpty
         }
-        let header = githubCookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        let header = CookieHeader.header(from: githubCookies)
         guard hasSession, !header.isEmpty else {
             let message = "Invalid response from GitHub"
             error = message
@@ -163,39 +160,18 @@ final class CopilotService {
     }
 
     private func fetchEntitlement(cookieHeader: String) async throws -> CopilotEntitlementResponse {
-        let (data, _) = try await performRequest(cookieHeader: cookieHeader)
+        let data = try await transport.data(
+            for: UsageRequest(
+                url: Self.entitlementURL.absoluteString,
+                cookieHeader: cookieHeader,
+                headers: ["Accept": "application/json"]
+            )
+        )
         do {
             return try JSONDecoder().decode(CopilotEntitlementResponse.self, from: data)
         } catch {
             throw UsageFailure.Kind.invalidResponse
         }
-    }
-
-    private func performRequest(cookieHeader: String) async throws -> (Data, URLResponse) {
-        var request = URLRequest(url: Self.entitlementURL)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue(Self.browserUserAgent, forHTTPHeaderField: "User-Agent")
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await dataLoader(request)
-        } catch {
-            throw UsageFailure.Kind.network
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw UsageFailure.Kind.invalidResponse
-        }
-        if [401, 403, 404].contains(httpResponse.statusCode) || httpResponse.url?.path == "/login" {
-            throw UsageFailure.Kind.authExpired
-        }
-        guard httpResponse.statusCode == 200 else {
-            throw UsageFailure.Kind.httpError(httpResponse.statusCode)
-        }
-        return (data, response)
     }
 
     private func makeSnapshot(from response: CopilotEntitlementResponse) throws -> UsageSnapshot {
