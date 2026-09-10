@@ -2,7 +2,10 @@ import Foundation
 import Observation
 
 @Observable
-final class CursorService {
+final class CursorService: UsageDisplaying {
+    let provider = Provider.cursor
+    var subtitle: String? { userName }
+
     var isEnabled: Bool {
         get { session.isEnabled }
         set { session.isEnabled = newValue }

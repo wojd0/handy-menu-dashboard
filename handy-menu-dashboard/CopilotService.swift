@@ -2,7 +2,9 @@ import Foundation
 import Observation
 
 @Observable
-final class CopilotService {
+final class CopilotService: UsageDisplaying {
+    let provider = Provider.copilot
+
     var isEnabled: Bool {
         get { session.isEnabled }
         set { session.isEnabled = newValue }

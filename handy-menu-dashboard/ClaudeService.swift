@@ -18,7 +18,11 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 }
 
 @Observable
-final class ClaudeService {
+final class ClaudeService: UsageDisplaying {
+    let provider = Provider.claude
+
+    var reading: UsageReading { reading(for: baseline) }
+
     var isEnabled: Bool {
         get { session.isEnabled }
         set { session.isEnabled = newValue }

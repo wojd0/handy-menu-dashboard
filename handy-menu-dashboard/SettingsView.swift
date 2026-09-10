@@ -115,10 +115,50 @@ struct SettingsView: View {
     @ViewBuilder
     private func section(for provider: Provider) -> some View {
         switch provider {
-        case .cursor: cursorSection
-        case .copilot: copilotSection
-        case .claude: claudeSection
-        case .chatgpt: chatGPTSection
+        case .cursor:
+            ProviderSettingsCard(
+                service: cursorService,
+                draggedProvider: $draggedProvider,
+                signingOutProvider: signingOutProvider,
+                onSignIn: { showCursorLogin = true },
+                onSignOut: { signOut(cursorService.provider) }
+            )
+        case .copilot:
+            ProviderSettingsCard(
+                service: copilotService,
+                draggedProvider: $draggedProvider,
+                signingOutProvider: signingOutProvider,
+                onSignIn: { showCopilotLogin = true },
+                onSignOut: { signOut(copilotService.provider) }
+            )
+        case .claude:
+            ProviderSettingsCard(
+                service: claudeService,
+                draggedProvider: $draggedProvider,
+                signingOutProvider: signingOutProvider,
+                onSignIn: { showClaudeLogin = true },
+                onSignOut: { signOut(claudeService.provider) }
+            ) {
+                HStack {
+                    Text("Baseline")
+                        .font(.callout)
+                    Picker("", selection: $claudeService.baseline) {
+                        ForEach(ClaudeBaseline.allCases) { baseline in
+                            Text(baseline.label).tag(baseline)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+            }
+        case .chatgpt:
+            ProviderSettingsCard(
+                service: chatGPTService,
+                draggedProvider: $draggedProvider,
+                signingOutProvider: signingOutProvider,
+                onSignIn: { showChatGPTLogin = true },
+                onSignOut: { signOut(chatGPTService.provider) }
+            )
         }
     }
 
@@ -140,254 +180,6 @@ struct SettingsView: View {
         order.insert(moved, at: after ? targetIndex + 1 : targetIndex)
         providerOrderRaw = Provider.raw(from: order)
         return true
-    }
-
-    private func dragHandle(for provider: Provider) -> some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .contentShape(Rectangle())
-            .help("Drag to reorder")
-            .onDrag {
-                draggedProvider = provider
-                return NSItemProvider(object: provider.rawValue as NSString)
-            } preview: {
-                Label(provider.displayName, systemImage: provider.iconName)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-            }
-            .onHover { hovering in
-                if hovering {
-                    NSCursor.openHand.set()
-                } else {
-                    NSCursor.arrow.set()
-                }
-            }
-    }
-
-    private var cursorSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                dragHandle(for: .cursor)
-                Image(systemName: "cursorarrow.click")
-                Text("Cursor")
-                    .font(.headline)
-                Spacer()
-                if cursorService.isAuthenticated {
-                    Toggle("", isOn: $cursorService.isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
-            }
-
-            if cursorService.isAuthenticated {
-                HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Sign Out") { signOut(.cursor) }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .disabled(signingOutProvider != nil)
-                }
-
-                HStack {
-                    Text("Menu Bar Unit")
-                        .font(.callout)
-                    Spacer()
-                    Picker("", selection: $cursorService.menuBarDisplayMode) {
-                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
-                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
-                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
-            } else {
-                Text("Sign in via browser to fetch your Cursor usage data.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(signInButtonTitle(for: .cursor)) { showCursorLogin = true }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(signingOutProvider != nil)
-            }
-        }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var copilotSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                dragHandle(for: .copilot)
-                Image(systemName: "chevron.left.forwardslash.chevron.right")
-                Text("GitHub Copilot")
-                    .font(.headline)
-                Spacer()
-                if copilotService.isAuthenticated {
-                    Toggle("", isOn: $copilotService.isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
-            }
-
-            if copilotService.isAuthenticated {
-                HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Sign Out") { signOut(.copilot) }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .disabled(signingOutProvider != nil)
-                }
-
-                HStack {
-                    Text("Menu Bar Unit")
-                        .font(.callout)
-                    Spacer()
-                    Picker("", selection: $copilotService.menuBarDisplayMode) {
-                        Text("Credits").tag(MenuBarDisplayMode.monetary)
-                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
-                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
-            } else {
-                Text("Sign in via browser to fetch your GitHub Copilot credit usage.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(signInButtonTitle(for: .copilot)) { showCopilotLogin = true }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(signingOutProvider != nil)
-            }
-        }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var claudeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                dragHandle(for: .claude)
-                Image(systemName: "sparkle")
-                Text("Claude")
-                    .font(.headline)
-                Spacer()
-                if claudeService.isAuthenticated {
-                    Toggle("", isOn: $claudeService.isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
-            }
-
-            if claudeService.isAuthenticated {
-                HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Sign Out") { signOut(.claude) }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .disabled(signingOutProvider != nil)
-                }
-
-                HStack {
-                    Text("Baseline")
-                        .font(.callout)
-                    Picker("", selection: $claudeService.baseline) {
-                        ForEach(ClaudeBaseline.allCases) { baseline in
-                            Text(baseline.label).tag(baseline)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-
-                HStack {
-                    Text("Menu Bar Unit")
-                        .font(.callout)
-                    Spacer()
-                    Picker("", selection: $claudeService.menuBarDisplayMode) {
-                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
-                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
-                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
-            } else {
-                Text("Sign in via browser to fetch your Claude usage data.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(signInButtonTitle(for: .claude)) { showClaudeLogin = true }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(signingOutProvider != nil)
-            }
-        }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var chatGPTSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                dragHandle(for: .chatgpt)
-                Image(systemName: "bubble.left.and.bubble.right")
-                Text("ChatGPT")
-                    .font(.headline)
-                Spacer()
-                if chatGPTService.isAuthenticated {
-                    Toggle("", isOn: $chatGPTService.isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
-            }
-
-            if chatGPTService.isAuthenticated {
-                HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Sign Out") { signOut(.chatgpt) }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .disabled(signingOutProvider != nil)
-                }
-
-                HStack {
-                    Text("Menu Bar Unit")
-                        .font(.callout)
-                    Spacer()
-                    Picker("", selection: $chatGPTService.menuBarDisplayMode) {
-                        Text("Credits").tag(MenuBarDisplayMode.monetary)
-                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
-                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
-            } else {
-                Text("Sign in via browser to fetch your ChatGPT monthly credit usage.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(signInButtonTitle(for: .chatgpt)) { showChatGPTLogin = true }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(signingOutProvider != nil)
-            }
-        }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func signInButtonTitle(for provider: Provider) -> String {
-        signingOutProvider == provider ? "Clearing browser session..." : "Sign in to \(provider.displayName)..."
     }
 
     private func signOut(_ provider: Provider) {

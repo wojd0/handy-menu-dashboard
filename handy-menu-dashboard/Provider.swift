@@ -50,6 +50,22 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var monetaryLabel: String {
+        switch self {
+        case .cursor, .claude: "Dollars"
+        case .copilot, .chatgpt: "Credits"
+        }
+    }
+
+    var signInBlurb: String {
+        switch self {
+        case .cursor: "Sign in via browser to fetch your Cursor usage data."
+        case .copilot: "Sign in via browser to fetch your GitHub Copilot credit usage."
+        case .claude: "Sign in via browser to fetch your Claude usage data."
+        case .chatgpt: "Sign in via browser to fetch your ChatGPT monthly credit usage."
+        }
+    }
+
     var signInTitle: String { "Sign in to \(errorNoun)" }
 
     var errorNoun: String {

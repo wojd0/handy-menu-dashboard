@@ -2,7 +2,9 @@ import Foundation
 import Observation
 
 @Observable
-final class ChatGPTService {
+final class ChatGPTService: UsageDisplaying {
+    let provider = Provider.chatgpt
+
     var isEnabled: Bool {
         get { session.isEnabled }
         set { session.isEnabled = newValue }
