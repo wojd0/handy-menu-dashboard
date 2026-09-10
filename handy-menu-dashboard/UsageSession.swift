@@ -57,7 +57,6 @@ final class UsageSession {
         errorMessage = outcome.state.errorMessage
         if outcome.discardsCredential {
             discardCredential()
-            errorMessage = outcome.state.errorMessage
         }
     }
 
