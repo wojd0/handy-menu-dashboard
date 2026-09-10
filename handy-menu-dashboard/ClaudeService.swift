@@ -19,9 +19,6 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 
 @Observable
 final class ClaudeService {
-    var isLoading = false
-    var error: String?
-    var isAuthenticated = false
     var isEnabled = true
 
     var spendUsedDollars: Double = 0
@@ -32,10 +29,21 @@ final class ClaudeService {
     var hasSpend = false
     var hasCredit = false
 
-    private var cookieHeader: String?
-    private let refreshLoop = RefreshLoop()
-    private let keychain: any KeychainStoring
-    private let transport: UsageTransport
+    @ObservationIgnored private let session: UsageSession
+    @ObservationIgnored private let refreshLoop = RefreshLoop()
+    @ObservationIgnored private let transport: UsageTransport
+
+    var isLoading: Bool { session.isLoading }
+
+    var isAuthenticated: Bool {
+        get { session.isAuthenticated }
+        set { session.isAuthenticated = newValue }
+    }
+
+    var error: String? {
+        get { session.errorMessage }
+        set { session.errorMessage = newValue }
+    }
 
     var combinedUsedDollars: Double { spendUsedDollars + creditUsedDollars }
     var combinedLimitDollars: Double { spendLimitDollars + creditLimitDollars }
@@ -80,10 +88,10 @@ final class ClaudeService {
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true
     ) {
-        self.keychain = keychain
+        session = UsageSession(provider: .claude, keychain: keychain)
         transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "claudeEnabled") as? Bool) ?? true
-        loadCredentials()
+        session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()
         }
@@ -92,16 +100,12 @@ final class ClaudeService {
     func saveCookies(_ cookies: [HTTPCookie]) {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return }
-        keychain.saveString(key: .claudeCookies, value: header)
-        cookieHeader = header
-        isAuthenticated = true
+        session.persist(header)
         Task { await refresh() }
     }
 
     func clearCredentials() async {
-        keychain.delete(key: .claudeCookies)
-        cookieHeader = nil
-        isAuthenticated = false
+        session.discardCredential()
         spendUsedDollars = 0
         spendLimitDollars = 0
         creditUsedDollars = 0
@@ -114,22 +118,14 @@ final class ClaudeService {
     }
 
     func refresh() async {
-        guard let cookieHeader, !cookieHeader.isEmpty else { return }
-
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-
-        do {
-            let orgId = try await resolveOrgId(cookieHeader: cookieHeader)
-            let usage = try await fetchUsage(orgId: orgId, cookieHeader: cookieHeader)
-            guard self.cookieHeader == cookieHeader else { return }
-            applyUsage(usage)
-        } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
-        } catch {
-            self.error = "Failed to load Claude usage"
-        }
+        await session.run(
+            load: { cookie in
+                let orgId = try await self.resolveOrgId(cookieHeader: cookie)
+                return try await self.fetchUsage(orgId: orgId, cookieHeader: cookie)
+            },
+            apply: { self.applyUsage($0) },
+            unexpected: "Failed to load Claude usage"
+        )
     }
 
     private func resolveOrgId(cookieHeader: String) async throws -> String {
@@ -170,8 +166,6 @@ final class ClaudeService {
             }
             hasCredit = true
         }
-
-        isAuthenticated = true
     }
 
     private func request(url: String, cookieHeader: String) async throws(UsageFailure.Kind) -> Data {
@@ -182,26 +176,6 @@ final class ClaudeService {
                 headers: ["anthropic-client-platform": "web_claude_ai"]
             )
         )
-    }
-
-    private func handleFailure(_ kind: UsageFailure.Kind) {
-        let outcome = SessionTransition.apply(
-            UsageFailure(kind: kind, provider: .claude),
-            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
-        )
-        isAuthenticated = outcome.state.isAuthenticated
-        error = outcome.state.errorMessage
-        if outcome.discardsCredential {
-            keychain.delete(key: .claudeCookies)
-            cookieHeader = nil
-        }
-    }
-
-    private func loadCredentials() {
-        if let header = keychain.loadString(key: .claudeCookies), !header.isEmpty {
-            cookieHeader = header
-            isAuthenticated = true
-        }
     }
 
     private func startAutoRefresh() {
