@@ -3,26 +3,6 @@ import Foundation
 enum UsageMath {
     static let infinitySymbol = "∞"
 
-    static func formatCentsAsDollars(_ cents: Int) -> String {
-        let dollars = Double(cents) / 100.0
-        return String(format: "$%.2f", dollars)
-    }
-
-    static func spendPercentUsed(spendCents: Int, monthlyLimitDollars: Int) -> Double {
-        guard monthlyLimitDollars > 0 else { return 0 }
-        return Double(spendCents) / Double(monthlyLimitDollars * 100) * 100
-    }
-
-    static func cursorMenuBarFragment(
-        spendCents: Int,
-        monthlyLimitDollars: Int,
-        isUnlimited: Bool = false
-    ) -> String {
-        let dollars = Int(Double(spendCents) / 100.0)
-        let limit = isUnlimited ? infinitySymbol : "\(monthlyLimitDollars)"
-        return "$\(dollars)/\(limit)"
-    }
-
     static func menuBarPercentFragment(percent: Double, isUnlimited: Bool = false) -> String {
         if isUnlimited {
             return "\(infinitySymbol)%"
@@ -32,11 +12,6 @@ enum UsageMath {
 
     static func isOverLimit(percentUsed: Double) -> Bool {
         percentUsed > 100
-    }
-
-    static func copilotCreditsFragment(used: Double, total: Double, isUnlimited: Bool = false) -> String {
-        let totalText = isUnlimited ? infinitySymbol : formatAbbreviatedCredits(total)
-        return "\(formatAbbreviatedCredits(used))/\(totalText)"
     }
 
     static func percentUsed(used: Double, limit: Double) -> Double {
@@ -55,14 +30,6 @@ enum UsageMath {
 
     static func formatDollars(_ value: Double) -> String {
         String(format: "$%.2f", value)
-    }
-
-    static func claudeDollarsFragment(used: Double, limit: Double) -> String {
-        "$\(Int(used))/\(Int(limit))"
-    }
-
-    static func chatGPTCreditsFragment(used: Double, limit: Double) -> String {
-        "\(formatCompactNumber(used))/\(formatCompactNumber(limit))"
     }
 
     static func formatCredits(_ value: Double) -> String {

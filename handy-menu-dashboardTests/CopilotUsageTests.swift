@@ -265,6 +265,40 @@ struct CopilotUsageTests {
         #expect(keychain.loadString(key: .copilotEntitlement) == nil)
     }
 
+    @Test func percentRemainingIsTheComplementEvenWhenTheServerDisagrees() async {
+        let service = CopilotService(
+            keychain: InMemoryKeychainStore(),
+            dataLoader: { request in
+                try response(for: request, json: entitlementJSON(total: 1_000, used: 400, remaining: 250))
+            },
+            autoRefresh: false
+        )
+
+        let result = await service.authenticate(with: makeCookies())
+
+        #expect(result == .authenticated)
+        #expect(service.creditsRemaining == 250)
+        #expect(service.percentUsed == 40)
+        #expect(service.percentRemaining == 60)
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "60%")
+    }
+
+    @Test func percentRemainingGoesNegativeOverTheLimit() async {
+        let service = CopilotService(
+            keychain: InMemoryKeychainStore(),
+            dataLoader: { request in
+                try response(for: request, json: entitlementJSON(total: 100, used: 125, remaining: 0))
+            },
+            autoRefresh: false
+        )
+
+        let result = await service.authenticate(with: makeCookies())
+
+        #expect(result == .authenticated)
+        #expect(service.percentRemaining == -25)
+        #expect(service.menuBarFragment(displayMode: .percentRemaining) == "-25%")
+    }
+
     private func makeService() -> CopilotService {
         CopilotService(keychain: InMemoryKeychainStore(), autoRefresh: false)
     }

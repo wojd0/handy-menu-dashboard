@@ -18,8 +18,18 @@ final class CursorService {
     private let keychain: any KeychainStoring
     private let transport: UsageTransport
 
+    var reading: UsageReading {
+        UsageReading(
+            used: Double(spendCents) / 100,
+            limit: Double(monthlyLimitDollars),
+            isUnlimited: isUnlimited,
+            amountStyle: .wholeDollars,
+            detailStyle: .dollarsWholeLimit
+        )
+    }
+
     var spendFormatted: String {
-        UsageMath.formatCentsAsDollars(spendCents)
+        UsageMath.formatDollars(reading.used)
     }
 
     var limitFormatted: String {
@@ -29,38 +39,23 @@ final class CursorService {
         return "$\(monthlyLimitDollars)"
     }
 
-    var spendPercentUsed: Double {
-        UsageMath.spendPercentUsed(spendCents: spendCents, monthlyLimitDollars: monthlyLimitDollars)
-    }
+    var spendPercentUsed: Double { reading.percentUsed }
 
-    var spendPercentRemaining: Double {
-        UsageMath.percentRemaining(
-            used: Double(spendCents),
-            limit: Double(monthlyLimitDollars * 100)
-        )
-    }
+    var spendPercentRemaining: Double { reading.percentRemaining }
+
+    var isOverLimit: Bool { reading.isOverLimit }
+
+    var detailText: String { reading.detailText }
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
     var menuBarFragment: String {
-        guard isActive else { return "" }
-        return UsageMath.cursorMenuBarFragment(
-            spendCents: spendCents,
-            monthlyLimitDollars: monthlyLimitDollars,
-            isUnlimited: isUnlimited
-        )
+        menuBarFragment(displayMode: .monetary)
     }
 
     func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        switch displayMode {
-        case .monetary:
-            return menuBarFragment
-        case .percentUsed:
-            return UsageMath.menuBarPercentFragment(percent: spendPercentUsed, isUnlimited: isUnlimited)
-        case .percentRemaining:
-            return UsageMath.menuBarPercentFragment(percent: spendPercentRemaining, isUnlimited: isUnlimited)
-        }
+        return reading.menuBarText(displayMode)
     }
 
     init(

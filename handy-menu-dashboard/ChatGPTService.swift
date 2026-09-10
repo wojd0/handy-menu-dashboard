@@ -26,42 +26,34 @@ final class ChatGPTService {
 
     static let websiteDataDomains = ["chatgpt.com", "openai.com"]
 
-    var percentUsed: Double {
-        UsageMath.percentUsed(used: currentMonthUsage, limit: monthlyLimitCredits)
+    var reading: UsageReading {
+        UsageReading(
+            used: currentMonthUsage,
+            limit: monthlyLimitCredits,
+            amountStyle: .compactCredits,
+            detailStyle: .credits
+        )
     }
 
-    var percentRemaining: Double {
-        UsageMath.percentRemaining(used: currentMonthUsage, limit: monthlyLimitCredits)
-    }
+    var percentUsed: Double { reading.percentUsed }
 
-    var isOverLimit: Bool {
-        UsageMath.isOverLimit(percentUsed: percentUsed)
-    }
+    var percentRemaining: Double { reading.percentRemaining }
+
+    var isOverLimit: Bool { reading.isOverLimit }
 
     var isActive: Bool {
         isAuthenticated && isEnabled
     }
 
-    var detailText: String {
-        "\(UsageMath.formatCredits(currentMonthUsage)) / "
-            + "\(UsageMath.formatCredits(monthlyLimitCredits)) credits"
-    }
+    var detailText: String { reading.detailText }
 
     var menuBarFragment: String {
-        guard isActive else { return "" }
-        return UsageMath.chatGPTCreditsFragment(used: currentMonthUsage, limit: monthlyLimitCredits)
+        menuBarFragment(displayMode: .monetary)
     }
 
     func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        switch displayMode {
-        case .monetary:
-            return menuBarFragment
-        case .percentUsed:
-            return UsageMath.menuBarPercentFragment(percent: percentUsed)
-        case .percentRemaining:
-            return UsageMath.menuBarPercentFragment(percent: percentRemaining)
-        }
+        return reading.menuBarText(displayMode)
     }
 
     init(

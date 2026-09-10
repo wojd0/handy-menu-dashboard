@@ -28,46 +28,35 @@ final class CopilotService {
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
     static let noQuotaMessage = "No Copilot credit quota is available for this account."
 
-    var percentUsed: Double {
-        UsageMath.percentUsed(used: creditsUsed, limit: creditsTotal)
+    var reading: UsageReading {
+        UsageReading(
+            used: creditsUsed,
+            limit: creditsTotal,
+            isUnlimited: isUnlimited,
+            amountStyle: .abbreviatedCredits,
+            detailStyle: .credits
+        )
     }
 
-    var percentRemaining: Double {
-        UsageMath.percentUsed(used: creditsRemaining, limit: creditsTotal)
-    }
+    var percentUsed: Double { reading.percentUsed }
 
-    var isOverLimit: Bool {
-        !isUnlimited && UsageMath.isOverLimit(percentUsed: percentUsed)
-    }
+    var percentRemaining: Double { reading.percentRemaining }
+
+    var isOverLimit: Bool { reading.isOverLimit }
 
     var isActive: Bool {
         isAuthenticated && isEnabled
     }
 
-    var detailText: String {
-        let total = isUnlimited ? UsageMath.infinitySymbol : UsageMath.formatCredits(creditsTotal)
-        return "\(UsageMath.formatCredits(creditsUsed)) / \(total) credits"
-    }
+    var detailText: String { reading.detailText }
 
     var menuBarFragment: String {
-        guard isActive else { return "" }
-        return UsageMath.copilotCreditsFragment(
-            used: creditsUsed,
-            total: creditsTotal,
-            isUnlimited: isUnlimited
-        )
+        menuBarFragment(displayMode: .monetary)
     }
 
     func menuBarFragment(displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        switch displayMode {
-        case .monetary:
-            return menuBarFragment
-        case .percentUsed:
-            return UsageMath.menuBarPercentFragment(percent: percentUsed, isUnlimited: isUnlimited)
-        case .percentRemaining:
-            return UsageMath.menuBarPercentFragment(percent: percentRemaining, isUnlimited: isUnlimited)
-        }
+        return reading.menuBarText(displayMode)
     }
 
     init(

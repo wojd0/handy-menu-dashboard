@@ -43,50 +43,36 @@ final class ClaudeService {
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
-    func percentUsed(for baseline: ClaudeBaseline) -> Double {
+    func reading(for baseline: ClaudeBaseline) -> UsageReading {
         switch baseline {
-        case .usageLimit: UsageMath.percentUsed(used: spendUsedDollars, limit: spendLimitDollars)
-        case .credit: UsageMath.percentUsed(used: creditUsedDollars, limit: creditLimitDollars)
-        case .combined: UsageMath.percentUsed(used: combinedUsedDollars, limit: combinedLimitDollars)
+        case .usageLimit:
+            makeReading(used: spendUsedDollars, limit: spendLimitDollars)
+        case .credit:
+            makeReading(used: creditUsedDollars, limit: creditLimitDollars)
+        case .combined:
+            makeReading(used: combinedUsedDollars, limit: combinedLimitDollars)
         }
+    }
+
+    private func makeReading(used: Double, limit: Double) -> UsageReading {
+        UsageReading(used: used, limit: limit, amountStyle: .wholeDollars, detailStyle: .dollars)
+    }
+
+    func percentUsed(for baseline: ClaudeBaseline) -> Double {
+        reading(for: baseline).percentUsed
     }
 
     func percentRemaining(for baseline: ClaudeBaseline) -> Double {
-        switch baseline {
-        case .usageLimit: UsageMath.percentRemaining(used: spendUsedDollars, limit: spendLimitDollars)
-        case .credit: UsageMath.percentRemaining(used: creditUsedDollars, limit: creditLimitDollars)
-        case .combined: UsageMath.percentRemaining(used: combinedUsedDollars, limit: combinedLimitDollars)
-        }
+        reading(for: baseline).percentRemaining
     }
 
     func detailText(for baseline: ClaudeBaseline) -> String {
-        switch baseline {
-        case .usageLimit:
-            "\(UsageMath.formatDollars(spendUsedDollars)) / \(UsageMath.formatDollars(spendLimitDollars))"
-        case .credit:
-            "\(UsageMath.formatDollars(creditUsedDollars)) / \(UsageMath.formatDollars(creditLimitDollars))"
-        case .combined:
-            "\(UsageMath.formatDollars(combinedUsedDollars)) / \(UsageMath.formatDollars(combinedLimitDollars))"
-        }
+        reading(for: baseline).detailText
     }
 
     func menuBarFragment(baseline: ClaudeBaseline, displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        switch displayMode {
-        case .percentUsed:
-            return UsageMath.menuBarPercentFragment(percent: percentUsed(for: baseline))
-        case .percentRemaining:
-            return UsageMath.menuBarPercentFragment(percent: percentRemaining(for: baseline))
-        case .monetary:
-            switch baseline {
-            case .usageLimit:
-                return UsageMath.claudeDollarsFragment(used: spendUsedDollars, limit: spendLimitDollars)
-            case .credit:
-                return UsageMath.claudeDollarsFragment(used: creditUsedDollars, limit: creditLimitDollars)
-            case .combined:
-                return UsageMath.claudeDollarsFragment(used: combinedUsedDollars, limit: combinedLimitDollars)
-            }
-        }
+        return reading(for: baseline).menuBarText(displayMode)
     }
 
     init(

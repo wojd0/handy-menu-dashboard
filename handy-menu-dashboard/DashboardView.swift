@@ -79,9 +79,9 @@ struct DashboardView: View {
             UsageCardView(
                 provider: .cursor,
                 percentUsed: cursorService.spendPercentUsed,
-                detailText: "\(cursorService.spendFormatted) / \(cursorService.limitFormatted)",
+                detailText: cursorService.detailText,
                 subtitle: cursorService.userName,
-                isOverLimit: cursorService.spendPercentUsed > 100,
+                isOverLimit: cursorService.isOverLimit,
                 isUnlimited: cursorService.isUnlimited,
                 isLoading: cursorService.isLoading,
                 error: cursorService.error,
