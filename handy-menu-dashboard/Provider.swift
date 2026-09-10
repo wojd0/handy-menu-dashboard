@@ -37,6 +37,15 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var keychainKey: KeychainKey {
+        switch self {
+        case .cursor: .cursorCookies
+        case .copilot: .copilotCookies
+        case .claude: .claudeCookies
+        case .chatgpt: .chatGPTCookies
+        }
+    }
+
     var errorNoun: String {
         switch self {
         case .cursor: "Cursor"

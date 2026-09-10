@@ -3,20 +3,27 @@ import Observation
 
 @Observable
 final class CursorService {
-    var isLoading = false
-    var error: String?
-    var isAuthenticated = false
-
     var isEnabled = true
     var spendCents: Int = 0
     var monthlyLimitDollars: Int = 0
     var isUnlimited = false
     var userName: String?
 
-    private var cookieHeader: String?
-    private let refreshLoop = RefreshLoop()
-    private let keychain: any KeychainStoring
-    private let transport: UsageTransport
+    @ObservationIgnored private let session: UsageSession
+    @ObservationIgnored private let refreshLoop = RefreshLoop()
+    @ObservationIgnored private let transport: UsageTransport
+
+    var isLoading: Bool { session.isLoading }
+
+    var isAuthenticated: Bool {
+        get { session.isAuthenticated }
+        set { session.isAuthenticated = newValue }
+    }
+
+    var error: String? {
+        get { session.errorMessage }
+        set { session.errorMessage = newValue }
+    }
 
     var reading: UsageReading {
         UsageReading(
@@ -63,10 +70,10 @@ final class CursorService {
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true
     ) {
-        self.keychain = keychain
+        session = UsageSession(provider: .cursor, keychain: keychain)
         transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "cursorEnabled") as? Bool) ?? true
-        loadCredentials()
+        session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()
         }
@@ -75,16 +82,12 @@ final class CursorService {
     func saveCookies(_ cookies: [HTTPCookie]) {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return }
-        keychain.saveString(key: .cursorCookies, value: header)
-        cookieHeader = header
-        isAuthenticated = true
+        session.persist(header)
         Task { await refresh() }
     }
 
     func clearCredentials() async {
-        keychain.delete(key: .cursorCookies)
-        cookieHeader = nil
-        isAuthenticated = false
+        session.discardCredential()
         spendCents = 0
         monthlyLimitDollars = 0
         isUnlimited = false
@@ -94,33 +97,27 @@ final class CursorService {
     }
 
     func refresh() async {
-        guard let cookieHeader, !cookieHeader.isEmpty else { return }
+        await session.run(
+            load: { cookie in
+                let summary = try await self.fetchUsageSummary(cookie: cookie)
+                let name = self.userName == nil ? try await self.fetchMe(cookie: cookie).name : nil
+                return CursorPayload(summary: summary, userName: name)
+            },
+            apply: { payload in
+                self.apply(payload.summary)
+                if let name = payload.userName {
+                    self.userName = name
+                }
+            },
+            unexpected: "Failed to load Cursor usage"
+        )
+    }
 
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-
-        do {
-            let summary = try await fetchUsageSummary(cookie: cookieHeader)
-            guard self.cookieHeader == cookieHeader else { return }
-            isAuthenticated = true
-
-            if let overall = summary.individualUsage?.overall {
-                isUnlimited = summary.isUnlimited == true || overall.limit == nil
-                spendCents = overall.used ?? 0
-                monthlyLimitDollars = (overall.limit ?? 0) / 100
-            }
-
-            if userName == nil {
-                let me = try await fetchMe(cookie: cookieHeader)
-                guard self.cookieHeader == cookieHeader else { return }
-                userName = me.name
-            }
-        } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
-        } catch {
-            self.error = "Failed to load Cursor usage"
-        }
+    private func apply(_ summary: CursorUsageSummaryResponse) {
+        guard let overall = summary.individualUsage?.overall else { return }
+        isUnlimited = summary.isUnlimited == true || overall.limit == nil
+        spendCents = overall.used ?? 0
+        monthlyLimitDollars = (overall.limit ?? 0) / 100
     }
 
     private func fetchUsageSummary(cookie: String) async throws -> CursorUsageSummaryResponse {
@@ -137,32 +134,17 @@ final class CursorService {
         return try JSONDecoder().decode(AuthMeResponse.self, from: data)
     }
 
-    private func handleFailure(_ kind: UsageFailure.Kind) {
-        let outcome = SessionTransition.apply(
-            UsageFailure(kind: kind, provider: .cursor),
-            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
-        )
-        isAuthenticated = outcome.state.isAuthenticated
-        error = outcome.state.errorMessage
-        if outcome.discardsCredential {
-            keychain.delete(key: .cursorCookies)
-            cookieHeader = nil
-        }
-    }
-
-    private func loadCredentials() {
-        if let header = keychain.loadString(key: .cursorCookies), !header.isEmpty {
-            cookieHeader = header
-            isAuthenticated = true
-        }
-    }
-
     private func startAutoRefresh() {
         refreshLoop.start { [weak self] in
             guard let self, self.isActive else { return }
             await self.refresh()
         }
     }
+}
+
+private struct CursorPayload {
+    let summary: CursorUsageSummaryResponse
+    let userName: String?
 }
 
 private struct AuthMeResponse: Decodable {
