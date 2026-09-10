@@ -1,12 +1,6 @@
 import Foundation
 import Observation
 
-enum ChatGPTAuthenticationResult: Equatable {
-    case authenticated
-    case staleSession
-    case failure(String)
-}
-
 @Observable
 final class ChatGPTService {
     var isEnabled: Bool {
@@ -87,7 +81,7 @@ final class ChatGPTService {
         }
     }
 
-    func authenticate(with cookies: [HTTPCookie]) async -> ChatGPTAuthenticationResult {
+    func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty, CookieHeader.value(named: "_account", in: header) != nil else {
             let message = "Invalid response from ChatGPT"

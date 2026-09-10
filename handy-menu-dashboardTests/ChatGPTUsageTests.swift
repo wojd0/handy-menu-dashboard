@@ -8,7 +8,7 @@ struct ChatGPTUsageTests {
     private let accountID = "11111111-2222-3333-4444-555555555555"
 
     @Test func loginUsesAPersistentWebSession() {
-        let configuration = ChatGPTWebView.makeConfiguration()
+        let configuration = ValidatingWebView.makeConfiguration()
 
         #expect(configuration.websiteDataStore.isPersistent)
     }

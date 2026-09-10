@@ -50,6 +50,8 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var signInTitle: String { "Sign in to \(errorNoun)" }
+
     var errorNoun: String {
         switch self {
         case .cursor: "Cursor"

@@ -16,10 +16,18 @@ enum WebAuthSession {
         }
     }
 
+    static func clearWebsiteData(matching domains: [String], in store: WKWebsiteDataStore) async {
+        await withCheckedContinuation { continuation in
+            clearWebsiteData(matching: domains, in: store) {
+                continuation.resume()
+            }
+        }
+    }
+
     static func clearWebsiteData(
         matching domains: [String],
-        in store: WKWebsiteDataStore = .default(),
-        completion: @escaping () -> Void = {}
+        in store: WKWebsiteDataStore,
+        completion: @escaping () -> Void
     ) {
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         store.fetchDataRecords(ofTypes: types) { records in

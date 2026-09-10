@@ -53,13 +53,13 @@ struct SettingsView: View {
             CursorLoginView(cursorService: cursorService)
         }
         .sheet(isPresented: $showCopilotLogin) {
-            CopilotLoginView(copilotService: copilotService)
+            ValidatingLoginView(provider: .copilot) { await copilotService.authenticate(with: $0) }
         }
         .sheet(isPresented: $showClaudeLogin) {
             ClaudeLoginView(claudeService: claudeService)
         }
         .sheet(isPresented: $showChatGPTLogin) {
-            ChatGPTLoginView(chatGPTService: chatGPTService)
+            ValidatingLoginView(provider: .chatgpt) { await chatGPTService.authenticate(with: $0) }
         }
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled

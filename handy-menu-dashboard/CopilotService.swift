@@ -1,12 +1,6 @@
 import Foundation
 import Observation
 
-enum CopilotAuthenticationResult: Equatable {
-    case authenticated
-    case staleSession
-    case failure(String)
-}
-
 @Observable
 final class CopilotService {
     var isEnabled: Bool {
@@ -92,7 +86,7 @@ final class CopilotService {
         }
     }
 
-    func authenticate(with cookies: [HTTPCookie]) async -> CopilotAuthenticationResult {
+    func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
         let githubCookies = cookies.filter { cookie in
             cookie.domain == "github.com" || cookie.domain.hasSuffix(".github.com")
         }

@@ -6,7 +6,7 @@ import WebKit
 @Suite("Copilot usage")
 struct CopilotUsageTests {
     @Test func loginUsesAPersistentWebSession() {
-        let configuration = CopilotWebView.makeConfiguration()
+        let configuration = ValidatingWebView.makeConfiguration()
 
         #expect(configuration.websiteDataStore.isPersistent)
     }
