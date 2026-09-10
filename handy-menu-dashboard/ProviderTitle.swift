@@ -9,7 +9,7 @@ struct ProviderTitle: View {
                 .fill(provider.accentColor)
                 .frame(width: 8, height: 8)
                 .overlay {
-                    if provider == .chatgpt {
+                    if provider.accentNeedsOutline {
                         Circle()
                             .strokeBorder(.primary.opacity(0.35), lineWidth: 1)
                     }

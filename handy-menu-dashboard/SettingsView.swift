@@ -8,10 +8,7 @@ private struct DropIndicator: Equatable {
 }
 
 struct SettingsView: View {
-    @Bindable var cursorService: CursorService
-    @Bindable var copilotService: CopilotService
-    @Bindable var claudeService: ClaudeService
-    @Bindable var chatGPTService: ChatGPTService
+    let services: ServiceSet
     @State private var showCursorLogin = false
     @State private var showCopilotLogin = false
     @State private var showClaudeLogin = false
@@ -50,16 +47,16 @@ struct SettingsView: View {
         .padding(20)
         .frame(width: 460)
         .sheet(isPresented: $showCursorLogin) {
-            CursorLoginView(cursorService: cursorService)
+            CursorLoginView(cursorService: services.cursor)
         }
         .sheet(isPresented: $showCopilotLogin) {
-            ValidatingLoginView(provider: .copilot) { await copilotService.authenticate(with: $0) }
+            ValidatingLoginView(provider: .copilot) { await services.copilot.authenticate(with: $0) }
         }
         .sheet(isPresented: $showClaudeLogin) {
-            ClaudeLoginView(claudeService: claudeService)
+            ClaudeLoginView(claudeService: services.claude)
         }
         .sheet(isPresented: $showChatGPTLogin) {
-            ValidatingLoginView(provider: .chatgpt) { await chatGPTService.authenticate(with: $0) }
+            ValidatingLoginView(provider: .chatgpt) { await services.chatgpt.authenticate(with: $0) }
         }
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -116,49 +113,50 @@ struct SettingsView: View {
     private func section(for provider: Provider) -> some View {
         switch provider {
         case .cursor:
-            ProviderSettingsCard(
-                service: cursorService,
-                draggedProvider: $draggedProvider,
-                signingOutProvider: signingOutProvider,
-                onSignIn: { showCursorLogin = true },
-                onSignOut: { signOut(cursorService.provider) }
-            )
+            card(services.cursor) { showCursorLogin = true }
         case .copilot:
-            ProviderSettingsCard(
-                service: copilotService,
-                draggedProvider: $draggedProvider,
-                signingOutProvider: signingOutProvider,
-                onSignIn: { showCopilotLogin = true },
-                onSignOut: { signOut(copilotService.provider) }
-            )
+            card(services.copilot) { showCopilotLogin = true }
         case .claude:
-            ProviderSettingsCard(
-                service: claudeService,
-                draggedProvider: $draggedProvider,
-                signingOutProvider: signingOutProvider,
-                onSignIn: { showClaudeLogin = true },
-                onSignOut: { signOut(claudeService.provider) }
-            ) {
-                HStack {
-                    Text("Baseline")
-                        .font(.callout)
-                    Picker("", selection: $claudeService.baseline) {
-                        ForEach(ClaudeBaseline.allCases) { baseline in
-                            Text(baseline.label).tag(baseline)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-            }
+            claudeCard()
         case .chatgpt:
-            ProviderSettingsCard(
-                service: chatGPTService,
-                draggedProvider: $draggedProvider,
-                signingOutProvider: signingOutProvider,
-                onSignIn: { showChatGPTLogin = true },
-                onSignOut: { signOut(chatGPTService.provider) }
-            )
+            card(services.chatgpt) { showChatGPTLogin = true }
+        }
+    }
+
+    private func card<Service: UsageDisplaying>(
+        _ service: Service,
+        onSignIn: @escaping () -> Void
+    ) -> some View {
+        ProviderSettingsCard(
+            service: service,
+            draggedProvider: $draggedProvider,
+            signingOutProvider: signingOutProvider,
+            onSignIn: onSignIn,
+            onSignOut: { signOut(service.provider) }
+        )
+    }
+
+    private func claudeCard() -> some View {
+        @Bindable var claude = services.claude
+
+        return ProviderSettingsCard(
+            service: claude,
+            draggedProvider: $draggedProvider,
+            signingOutProvider: signingOutProvider,
+            onSignIn: { showClaudeLogin = true },
+            onSignOut: { signOut(claude.provider) }
+        ) {
+            HStack {
+                Text("Baseline")
+                    .font(.callout)
+                Picker("", selection: $claude.baseline) {
+                    ForEach(ClaudeBaseline.allCases) { baseline in
+                        Text(baseline.label).tag(baseline)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
         }
     }
 
@@ -187,16 +185,7 @@ struct SettingsView: View {
         signingOutProvider = provider
 
         Task {
-            switch provider {
-            case .cursor:
-                await cursorService.clearCredentials()
-            case .claude:
-                await claudeService.clearCredentials()
-            case .chatgpt:
-                await chatGPTService.clearCredentials()
-            case .copilot:
-                await copilotService.clearCredentials()
-            }
+            await services[provider].clearCredentials()
             signingOutProvider = nil
         }
     }

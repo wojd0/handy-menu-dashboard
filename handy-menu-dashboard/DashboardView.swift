@@ -1,10 +1,7 @@
 import SwiftUI
 
 struct DashboardView: View {
-    var cursorService: CursorService
-    var copilotService: CopilotService
-    var claudeService: ClaudeService
-    var chatGPTService: ChatGPTService
+    let services: ServiceSet
     @Environment(\.openWindow) private var openWindow
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
 
@@ -54,65 +51,38 @@ struct DashboardView: View {
         .padding(20)
         .frame(width: 280)
         .task {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await cursorService.refresh() }
-                group.addTask { await copilotService.refresh() }
-                group.addTask { await claudeService.refresh() }
-                group.addTask { await chatGPTService.refresh() }
-            }
+            await services.refreshAll()
         }
     }
 
     private func isActive(_ provider: Provider) -> Bool {
-        switch provider {
-        case .cursor: cursorService.isActive
-        case .copilot: copilotService.isActive
-        case .claude: claudeService.isActive
-        case .chatgpt: chatGPTService.isActive
-        }
+        services[provider].isActive
     }
 
     @ViewBuilder
     private func card(for provider: Provider) -> some View {
         switch provider {
-        case .cursor:
-            UsageCardView(
-                provider: .cursor,
-                percentUsed: cursorService.spendPercentUsed,
-                detailText: cursorService.detailText,
-                subtitle: cursorService.userName,
-                isOverLimit: cursorService.isOverLimit,
-                isUnlimited: cursorService.isUnlimited,
-                isLoading: cursorService.isLoading,
-                error: cursorService.error,
-                onRefresh: { Task { await cursorService.refresh() } }
-            )
-        case .copilot:
-            UsageCardView(
-                provider: .copilot,
-                percentUsed: copilotService.percentUsed,
-                detailText: copilotService.detailText,
-                subtitle: nil,
-                isOverLimit: copilotService.isOverLimit,
-                isUnlimited: copilotService.isUnlimited,
-                isLoading: copilotService.isLoading,
-                error: copilotService.error,
-                onRefresh: { Task { await copilotService.refresh() } }
-            )
         case .claude:
-            ClaudeUsageCardView(claudeService: claudeService)
-        case .chatgpt:
-            UsageCardView(
-                provider: .chatgpt,
-                percentUsed: chatGPTService.percentUsed,
-                detailText: chatGPTService.detailText,
-                subtitle: nil,
-                isOverLimit: chatGPTService.isOverLimit,
-                isLoading: chatGPTService.isLoading,
-                error: chatGPTService.error,
-                onRefresh: { Task { await chatGPTService.refresh() } }
-            )
+            ClaudeUsageCardView(claudeService: services.claude)
+        case .cursor, .copilot, .chatgpt:
+            usageCard(services[provider])
         }
+    }
+
+    private func usageCard(_ service: any UsageDisplaying) -> some View {
+        let reading = service.reading
+
+        return UsageCardView(
+            provider: service.provider,
+            percentUsed: reading.percentUsed,
+            detailText: reading.detailText,
+            subtitle: service.subtitle,
+            isOverLimit: reading.isOverLimit,
+            isUnlimited: reading.isUnlimited,
+            isLoading: service.isLoading,
+            error: service.error,
+            onRefresh: { Task { await service.refresh() } }
+        )
     }
 
     private func openSettings() {

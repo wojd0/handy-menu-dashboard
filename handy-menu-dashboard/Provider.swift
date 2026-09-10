@@ -15,10 +15,6 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         CodableRepresentation(contentType: .data)
     }
 
-    var isAvailable: Bool {
-        true
-    }
-
     var displayName: String {
         switch self {
         case .cursor: "Cursor"
@@ -84,6 +80,13 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var accentNeedsOutline: Bool {
+        switch self {
+        case .cursor, .copilot, .claude: false
+        case .chatgpt: true
+        }
+    }
+
     var accentColor: Color {
         switch self {
         case .cursor: .purple
@@ -99,7 +102,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
     static func ordered(from raw: String) -> [Provider] {
         let stored = raw.split(separator: ",").compactMap { Provider(rawValue: String($0)) }
         let missing = allCases.filter { !stored.contains($0) }
-        return (stored + missing).filter(\.isAvailable)
+        return stored + missing
     }
 
     static func raw(from providers: [Provider]) -> String {

@@ -2,10 +2,7 @@ import SwiftUI
 
 @main
 struct HandyMenuDashboardApp: App {
-    @State private var cursorService = CursorService()
-    @State private var copilotService = CopilotService()
-    @State private var claudeService = ClaudeService()
-    @State private var chatGPTService = ChatGPTService()
+    @State private var services = ServiceSet()
     @AppStorage("menuBarInserted") private var menuBarInserted = true
 
     init() {
@@ -14,29 +11,14 @@ struct HandyMenuDashboardApp: App {
 
     var body: some Scene {
         MenuBarExtra(isInserted: $menuBarInserted) {
-            DashboardView(
-                cursorService: cursorService,
-                copilotService: copilotService,
-                claudeService: claudeService,
-                chatGPTService: chatGPTService
-            )
+            DashboardView(services: services)
         } label: {
-            MenuBarLabel(
-                cursorService: cursorService,
-                copilotService: copilotService,
-                claudeService: claudeService,
-                chatGPTService: chatGPTService
-            )
+            MenuBarLabel(services: services)
         }
         .menuBarExtraStyle(.window)
 
         WindowGroup("Settings", id: "settings") {
-            SettingsView(
-                cursorService: cursorService,
-                copilotService: copilotService,
-                claudeService: claudeService,
-                chatGPTService: chatGPTService
-            )
+            SettingsView(services: services)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
@@ -44,19 +26,14 @@ struct HandyMenuDashboardApp: App {
 }
 
 struct MenuBarLabel: View {
-    var cursorService: CursorService
-    var copilotService: CopilotService
-    var claudeService: ClaudeService
-    var chatGPTService: ChatGPTService
+    let services: ServiceSet
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         let lines = Provider.ordered(from: providerOrderRaw)
-            .map { provider in
-                MenuBarLine(provider: provider, text: fragment(for: provider))
-            }
+            .map { MenuBarLine(provider: $0, text: services[$0].menuBarText) }
             .filter { !$0.text.isEmpty }
 
         if let image = renderImage(lines: lines) {
@@ -65,19 +42,6 @@ struct MenuBarLabel: View {
         } else {
             Text("Usage")
                 .font(.caption2)
-        }
-    }
-
-    private func fragment(for provider: Provider) -> String {
-        switch provider {
-        case .cursor:
-            cursorService.menuBarText
-        case .copilot:
-            copilotService.menuBarText
-        case .claude:
-            claudeService.menuBarText
-        case .chatgpt:
-            chatGPTService.menuBarText
         }
     }
 
