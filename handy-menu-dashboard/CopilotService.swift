@@ -20,7 +20,7 @@ final class CopilotService {
     var isUnlimited = false
 
     private var cookieHeader: String?
-    private var refreshTask: Task<Void, Never>?
+    private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
     private let dataLoader: UsageDataLoader
 
@@ -261,13 +261,9 @@ final class CopilotService {
     }
 
     private func startAutoRefresh() {
-        refreshTask = Task {
-            while !Task.isCancelled {
-                if isActive {
-                    await refresh()
-                }
-                try? await Task.sleep(for: .seconds(180))
-            }
+        refreshLoop.start { [weak self] in
+            guard let self, self.isActive else { return }
+            await self.refresh()
         }
     }
 

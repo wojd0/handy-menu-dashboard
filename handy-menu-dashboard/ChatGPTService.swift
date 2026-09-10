@@ -20,7 +20,7 @@ final class ChatGPTService {
     var limitMode: String?
 
     private var cookieHeader: String?
-    private var refreshTask: Task<Void, Never>?
+    private let refreshLoop = RefreshLoop()
     private let keychain: any KeychainStoring
     private let dataLoader: UsageDataLoader
 
@@ -318,13 +318,9 @@ final class ChatGPTService {
     }
 
     private func startAutoRefresh() {
-        refreshTask = Task {
-            while !Task.isCancelled {
-                if isActive {
-                    await refresh()
-                }
-                try? await Task.sleep(for: .seconds(180))
-            }
+        refreshLoop.start { [weak self] in
+            guard let self, self.isActive else { return }
+            await self.refresh()
         }
     }
 
