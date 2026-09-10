@@ -30,16 +30,13 @@ enum UsageMath {
         return "\(Int(percent.rounded()))%"
     }
 
-    static func copilotPercentUsed(totalUsed: Int, monthlyEntitlement: Int) -> Double {
-        monthlyEntitlement > 0 ? Double(totalUsed) / Double(monthlyEntitlement) * 100 : 0
-    }
-
     static func isOverLimit(percentUsed: Double) -> Bool {
         percentUsed > 100
     }
 
-    static func copilotMenuBarFragment(totalUsed: Int, monthlyEntitlement: Int) -> String {
-        "\(totalUsed)/\(monthlyEntitlement)"
+    static func copilotCreditsFragment(used: Double, total: Double, isUnlimited: Bool = false) -> String {
+        let totalText = isUnlimited ? infinitySymbol : formatAbbreviatedCredits(total)
+        return "\(formatAbbreviatedCredits(used))/\(totalText)"
     }
 
     static func percentUsed(used: Double, limit: Double) -> Double {
@@ -85,6 +82,51 @@ enum UsageMath {
             .replacingOccurrences(of: "0+$", with: "", options: .regularExpression)
             .replacingOccurrences(of: "\\.$", with: "", options: .regularExpression)
     }
+
+    static func formatAbbreviatedCredits(_ value: Double) -> String {
+        let absoluteValue = abs(value)
+        let divisor: Double
+        let suffix: String
+
+        switch absoluteValue {
+        case 1_000_000_000...:
+            divisor = 1_000_000_000
+            suffix = "B"
+        case 1_000_000...:
+            divisor = 1_000_000
+            suffix = "M"
+        case 1_000...:
+            divisor = 1_000
+            suffix = "K"
+        default:
+            return formatCompactNumber(value)
+        }
+
+        let scaled = value / divisor
+        let formatted = String(format: "%.1f", scaled)
+            .replacingOccurrences(of: "\\.0$", with: "", options: .regularExpression)
+        return "\(formatted)\(suffix)"
+    }
+}
+
+struct CopilotEntitlementResponse: Decodable {
+    struct Quotas: Decodable {
+        struct Remaining: Decodable {
+            let premiumInteractions: Double?
+        }
+
+        struct PremiumInteractionsQuota: Decodable {
+            let total: Double
+            let used: Double
+            let hasQuota: Bool?
+            let unlimited: Bool?
+        }
+
+        let remaining: Remaining?
+        let premiumInteractionsQuota: PremiumInteractionsQuota?
+    }
+
+    let quotas: Quotas
 }
 
 struct ClaudeUsageResponse: Decodable {

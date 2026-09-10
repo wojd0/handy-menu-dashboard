@@ -16,12 +16,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
     }
 
     var isAvailable: Bool {
-        switch self {
-        case .cursor: true
-        case .copilot: FeatureFlags.showGitHubSettings
-        case .claude: true
-        case .chatgpt: true
-        }
+        true
     }
 
     var displayName: String {

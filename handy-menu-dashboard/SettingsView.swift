@@ -13,11 +13,9 @@ struct SettingsView: View {
     @Bindable var claudeService: ClaudeService
     @Bindable var chatGPTService: ChatGPTService
     @State private var showCursorLogin = false
+    @State private var showCopilotLogin = false
     @State private var showClaudeLogin = false
     @State private var showChatGPTLogin = false
-    @State private var githubUsername = ""
-    @State private var githubPAT = ""
-    @State private var copilotEntitlement = ""
     @AppStorage("cursorMenuBarShowPercent") private var cursorDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage("copilotMenuBarShowPercent") private var copilotDisplayMode = MenuBarDisplayMode.monetary
     @AppStorage("claudeMenuBarShowPercent") private var claudeDisplayMode = MenuBarDisplayMode.monetary
@@ -30,10 +28,6 @@ struct SettingsView: View {
     @State private var dropIndicator: DropIndicator?
     @State private var cardHeights: [Provider: CGFloat] = [:]
     @State private var signingOutProvider: Provider?
-    private let fineGrainedPATURL = URL(
-        string: "https://github.com/settings/personal-access-tokens/new?"
-            + "description=Handy+Menu+Dashboard&expiration=none&permissions=plan:read"
-    )!
 
     var body: some View {
         VStack(spacing: 16) {
@@ -63,6 +57,9 @@ struct SettingsView: View {
         .sheet(isPresented: $showCursorLogin) {
             CursorLoginView(cursorService: cursorService)
         }
+        .sheet(isPresented: $showCopilotLogin) {
+            CopilotLoginView(copilotService: copilotService)
+        }
         .sheet(isPresented: $showClaudeLogin) {
             ClaudeLoginView(claudeService: claudeService)
         }
@@ -70,8 +67,6 @@ struct SettingsView: View {
             ChatGPTLoginView(chatGPTService: chatGPTService)
         }
         .onAppear {
-            githubUsername = copilotService.username
-            copilotEntitlement = String(copilotService.monthlyEntitlement)
             launchAtLogin = SMAppService.mainApp.status == .enabled
             NSApp.setActivationPolicy(.regular)
         }
@@ -251,29 +246,13 @@ struct SettingsView: View {
 
             if copilotService.isAuthenticated {
                 HStack {
-                    Label("Configured", systemImage: "checkmark.circle.fill")
+                    Label("Signed in", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Spacer()
-                    Button("Sign Out") {
-                        copilotService.clearCredentials()
-                        githubUsername = ""
-                        githubPAT = ""
-                    }
+                    Button("Sign Out") { signOut(.copilot) }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Monthly entitlement")
-                        .font(.callout)
-                    TextField("300", text: $copilotEntitlement)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 80)
-                        .onSubmit {
-                            if let entitlement = Int(copilotEntitlement) {
-                                copilotService.saveEntitlement(entitlement)
-                            }
-                        }
+                    .disabled(signingOutProvider != nil)
                 }
 
                 HStack {
@@ -281,7 +260,7 @@ struct SettingsView: View {
                         .font(.callout)
                     Spacer()
                     Picker("", selection: $copilotDisplayMode) {
-                        Text("Dollars").tag(MenuBarDisplayMode.monetary)
+                        Text("Credits").tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
                         Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
                     }
@@ -290,31 +269,12 @@ struct SettingsView: View {
                     .fixedSize()
                 }
             } else {
-                TextField("GitHub Username", text: $githubUsername)
-                    .textFieldStyle(.roundedBorder)
-
-                SecureField("Personal Access Token", text: $githubPAT)
-                    .textFieldStyle(.roundedBorder)
-
-                Link("Create a fine-grained PAT with \"Plan\" read permission",
-                     destination: fineGrainedPATURL)
-                    .font(.caption)
-
-                HStack {
-                    Text("Monthly entitlement")
-                        .font(.callout)
-                    TextField("300", text: $copilotEntitlement)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 80)
-                }
-
-                Button("Save") {
-                    copilotService.saveCredentials(username: githubUsername, pat: githubPAT)
-                    if let entitlement = Int(copilotEntitlement) {
-                        copilotService.saveEntitlement(entitlement)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
+                Text("Sign in via browser to fetch your GitHub Copilot credit usage.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Button(signInButtonTitle(for: .copilot)) { showCopilotLogin = true }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil)
             }
         }
         .padding(16)
@@ -460,7 +420,7 @@ struct SettingsView: View {
             case .chatgpt:
                 await chatGPTService.clearCredentials()
             case .copilot:
-                break
+                await copilotService.clearCredentials()
             }
             signingOutProvider = nil
         }

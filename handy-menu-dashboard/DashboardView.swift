@@ -56,9 +56,7 @@ struct DashboardView: View {
         .task {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await cursorService.refresh() }
-                if FeatureFlags.showGitHubSettings {
-                    group.addTask { await copilotService.refresh() }
-                }
+                group.addTask { await copilotService.refresh() }
                 group.addTask { await claudeService.refresh() }
                 group.addTask { await chatGPTService.refresh() }
             }
@@ -93,9 +91,10 @@ struct DashboardView: View {
             UsageCardView(
                 provider: .copilot,
                 percentUsed: copilotService.percentUsed,
-                detailText: "\(copilotService.totalUsed) / \(copilotService.monthlyEntitlement) premium requests",
+                detailText: copilotService.detailText,
                 subtitle: nil,
                 isOverLimit: copilotService.isOverLimit,
+                isUnlimited: copilotService.isUnlimited,
                 isLoading: copilotService.isLoading,
                 error: copilotService.error,
                 onRefresh: { Task { await copilotService.refresh() } }

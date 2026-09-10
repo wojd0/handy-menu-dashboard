@@ -7,7 +7,7 @@ cd "$ROOT"
 RESULT_BUNDLE="$ROOT/build/TestResults.xcresult"
 rm -rf "$RESULT_BUNDLE"
 
-SHOW_GITHUB_SETTINGS=true xcodebuild \
+xcodebuild \
   -project "handy-menu-dashboard.xcodeproj" \
   -scheme "handy-menu-dashboard" \
   -configuration Debug \
@@ -17,5 +17,3 @@ SHOW_GITHUB_SETTINGS=true xcodebuild \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGN_IDENTITY="" \
   test
-
-"$ROOT/scripts/generate-feature-flags.sh"

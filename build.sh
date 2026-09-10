@@ -4,8 +4,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-"$ROOT/scripts/generate-feature-flags.sh"
-
 xcodebuild \
   -project "handy-menu-dashboard.xcodeproj" \
   -scheme "handy-menu-dashboard" \
