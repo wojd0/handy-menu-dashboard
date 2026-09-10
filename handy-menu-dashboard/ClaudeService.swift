@@ -143,8 +143,8 @@ final class ClaudeService {
             let usage = try await fetchUsage(orgId: orgId, cookieHeader: cookieHeader)
             guard self.cookieHeader == cookieHeader else { return }
             applyUsage(usage)
-        } catch let err as ServiceError {
-            handleServiceError(err)
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
         } catch {
             self.error = "Failed to load Claude usage"
         }
@@ -160,7 +160,7 @@ final class ClaudeService {
         )
         struct OrgItem: Decodable { let uuid: String }
         let orgs = try JSONDecoder().decode([OrgItem].self, from: data)
-        guard let first = orgs.first else { throw ServiceError.invalidResponse }
+        guard let first = orgs.first else { throw UsageFailure.Kind.invalidResponse }
         return first.uuid
     }
 
@@ -208,7 +208,7 @@ final class ClaudeService {
     private func performRequest(
         url: String,
         cookieHeader: String
-    ) async throws(ServiceError) -> (Data, URLResponse) {
+    ) async throws(UsageFailure.Kind) -> (Data, URLResponse) {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "GET"
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
@@ -237,17 +237,16 @@ final class ClaudeService {
         return (data, response)
     }
 
-    private func handleServiceError(_ err: ServiceError) {
-        switch err {
-        case .authExpired:
-            isAuthenticated = false
-            error = "Session expired. Please sign in again."
-        case .httpError(let code):
-            error = "Claude returned status \(code)"
-        case .network:
-            error = "Unable to connect to Claude"
-        case .invalidResponse:
-            error = "Invalid response from Claude"
+    private func handleFailure(_ kind: UsageFailure.Kind) {
+        let outcome = SessionTransition.apply(
+            UsageFailure(kind: kind, provider: .claude),
+            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
+        )
+        isAuthenticated = outcome.state.isAuthenticated
+        error = outcome.state.errorMessage
+        if outcome.discardsCredential {
+            keychain.delete(key: .claudeCookies)
+            cookieHeader = nil
         }
     }
 
@@ -263,12 +262,5 @@ final class ClaudeService {
             guard let self, self.isActive else { return }
             await self.refresh()
         }
-    }
-
-    private enum ServiceError: Error {
-        case authExpired
-        case httpError(Int)
-        case network
-        case invalidResponse
     }
 }

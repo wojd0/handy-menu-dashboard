@@ -37,6 +37,22 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         }
     }
 
+    var errorNoun: String {
+        switch self {
+        case .cursor: "Cursor"
+        case .copilot: "GitHub"
+        case .claude: "Claude"
+        case .chatgpt: "ChatGPT"
+        }
+    }
+
+    var clearsCredentialOnAuthExpiry: Bool {
+        switch self {
+        case .cursor, .claude: false
+        case .copilot, .chatgpt: true
+        }
+    }
+
     var accentColor: Color {
         switch self {
         case .cursor: .purple

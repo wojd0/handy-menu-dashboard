@@ -29,6 +29,7 @@ final class CopilotService {
         + "(KHTML, like Gecko) Version/18.5 Safari/605.1.15"
     static let websiteDataDomains = ["github.com"]
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
+    static let noQuotaMessage = "No Copilot credit quota is available for this account."
 
     var percentUsed: Double {
         UsageMath.percentUsed(used: creditsUsed, limit: creditsTotal)
@@ -113,12 +114,12 @@ final class CopilotService {
             apply(snapshot)
             isAuthenticated = true
             return .authenticated
-        } catch let serviceError as ServiceError {
-            handleServiceError(serviceError)
-            switch serviceError {
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
+            switch kind {
             case .authExpired:
                 return .staleSession
-            case .noQuota, .httpError, .network, .invalidResponse:
+            case .rejected, .httpError, .network, .invalidResponse:
                 return .failure(error ?? "Unable to sign in to GitHub")
             }
         } catch {
@@ -154,8 +155,8 @@ final class CopilotService {
             guard self.cookieHeader == cookieHeader else { return }
             apply(snapshot)
             isAuthenticated = true
-        } catch let serviceError as ServiceError {
-            handleServiceError(serviceError)
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
         } catch {
             self.error = "Invalid response from GitHub"
         }
@@ -166,7 +167,7 @@ final class CopilotService {
         do {
             return try JSONDecoder().decode(CopilotEntitlementResponse.self, from: data)
         } catch {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
     }
 
@@ -182,32 +183,32 @@ final class CopilotService {
         do {
             (data, response) = try await dataLoader(request)
         } catch {
-            throw ServiceError.network
+            throw UsageFailure.Kind.network
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
         if [401, 403, 404].contains(httpResponse.statusCode) || httpResponse.url?.path == "/login" {
-            throw ServiceError.authExpired
+            throw UsageFailure.Kind.authExpired
         }
         guard httpResponse.statusCode == 200 else {
-            throw ServiceError.httpError(httpResponse.statusCode)
+            throw UsageFailure.Kind.httpError(httpResponse.statusCode)
         }
         return (data, response)
     }
 
     private func makeSnapshot(from response: CopilotEntitlementResponse) throws -> UsageSnapshot {
         guard let quota = response.quotas.premiumInteractionsQuota else {
-            throw ServiceError.noQuota
+            throw UsageFailure.Kind.rejected(Self.noQuotaMessage)
         }
         guard quota.hasQuota != false else {
-            throw ServiceError.noQuota
+            throw UsageFailure.Kind.rejected(Self.noQuotaMessage)
         }
 
         let unlimited = quota.unlimited == true
         guard unlimited || quota.total > 0 else {
-            throw ServiceError.noQuota
+            throw UsageFailure.Kind.rejected(Self.noQuotaMessage)
         }
 
         return UsageSnapshot(
@@ -226,24 +227,16 @@ final class CopilotService {
         isUnlimited = snapshot.unlimited
     }
 
-    private func handleServiceError(_ serviceError: ServiceError) {
-        switch serviceError {
-        case .authExpired:
+    private func handleFailure(_ kind: UsageFailure.Kind) {
+        let outcome = SessionTransition.apply(
+            UsageFailure(kind: kind, provider: .copilot),
+            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
+        )
+        isAuthenticated = outcome.state.isAuthenticated
+        error = outcome.state.errorMessage
+        if outcome.discardsCredential {
             keychain.delete(key: .copilotCookies)
             cookieHeader = nil
-            isAuthenticated = false
-            error = "Session expired. Please sign in again."
-        case .noQuota:
-            keychain.delete(key: .copilotCookies)
-            cookieHeader = nil
-            isAuthenticated = false
-            error = "No Copilot credit quota is available for this account."
-        case .httpError(let code):
-            error = "GitHub returned status \(code)"
-        case .network:
-            error = "Unable to connect to GitHub"
-        case .invalidResponse:
-            error = "Invalid response from GitHub"
         }
     }
 
@@ -272,13 +265,5 @@ final class CopilotService {
         let total: Double
         let remaining: Double
         let unlimited: Bool
-    }
-
-    private enum ServiceError: Error {
-        case authExpired
-        case noQuota
-        case httpError(Int)
-        case network
-        case invalidResponse
     }
 }

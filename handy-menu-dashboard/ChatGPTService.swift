@@ -100,12 +100,12 @@ final class ChatGPTService {
             applyUsage(usage)
             isAuthenticated = true
             return .authenticated
-        } catch let serviceError as ServiceError {
-            handleServiceError(serviceError)
-            switch serviceError {
-            case .authExpired, .accountMismatch:
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
+            switch kind {
+            case .authExpired:
                 return .staleSession
-            case .httpError, .network, .invalidResponse:
+            case .rejected, .httpError, .network, .invalidResponse:
                 return .failure(error ?? "Unable to sign in to ChatGPT")
             }
         } catch {
@@ -139,8 +139,8 @@ final class ChatGPTService {
             guard self.cookieHeader == cookieHeader else { return }
             applyUsage(usage)
             isAuthenticated = true
-        } catch let serviceError as ServiceError {
-            handleServiceError(serviceError)
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
         } catch {
             self.error = "Invalid response from ChatGPT"
         }
@@ -151,7 +151,7 @@ final class ChatGPTService {
         let accessToken = try await fetchAccessToken(cookieHeader: cookieHeader)
         let tokenAccount = try Self.accountID(fromJWT: accessToken)
         guard accountCookie == tokenAccount else {
-            throw ServiceError.accountMismatch
+            throw UsageFailure.Kind.authExpired
         }
 
         return try await fetchUsage(
@@ -164,7 +164,7 @@ final class ChatGPTService {
     static func accountID(fromJWT token: String) throws -> String {
         let parts = token.split(separator: ".")
         guard parts.count == 3 else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
 
         var payload = String(parts[1])
@@ -173,7 +173,7 @@ final class ChatGPTService {
         payload += String(repeating: "=", count: (4 - payload.count % 4) % 4)
 
         guard let data = Data(base64Encoded: payload) else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
 
         do {
@@ -181,14 +181,14 @@ final class ChatGPTService {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             return try decoder.decode(TokenClaims.self, from: data).auth.chatgptAccountId
         } catch {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
     }
 
     private func currentAccountID(from cookieHeader: String) throws -> String {
         guard let accountID = extractCookieValue(named: "_account", from: cookieHeader),
               !accountID.isEmpty else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
         return accountID
     }
@@ -202,13 +202,13 @@ final class ChatGPTService {
         do {
             let session = try JSONDecoder().decode(AuthSessionResponse.self, from: data)
             guard let accessToken = session.accessToken, !accessToken.isEmpty else {
-                throw ServiceError.authExpired
+                throw UsageFailure.Kind.authExpired
             }
             return accessToken
-        } catch let serviceError as ServiceError {
-            throw serviceError
+        } catch let kind as UsageFailure.Kind {
+            throw kind
         } catch {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
     }
 
@@ -231,7 +231,7 @@ final class ChatGPTService {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             return try decoder.decode(ChatGPTUsageResponse.self, from: data)
         } catch {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
     }
 
@@ -249,7 +249,7 @@ final class ChatGPTService {
         accountID: String? = nil
     ) async throws -> (Data, URLResponse) {
         guard let requestURL = URL(string: url) else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
 
         var request = URLRequest(url: requestURL)
@@ -269,17 +269,17 @@ final class ChatGPTService {
         do {
             (data, response) = try await dataLoader(request)
         } catch {
-            throw ServiceError.network
+            throw UsageFailure.Kind.network
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw ServiceError.invalidResponse
+            throw UsageFailure.Kind.invalidResponse
         }
         if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            throw ServiceError.authExpired
+            throw UsageFailure.Kind.authExpired
         }
         guard httpResponse.statusCode == 200 else {
-            throw ServiceError.httpError(httpResponse.statusCode)
+            throw UsageFailure.Kind.httpError(httpResponse.statusCode)
         }
         return (data, response)
     }
@@ -294,19 +294,16 @@ final class ChatGPTService {
         return nil
     }
 
-    private func handleServiceError(_ serviceError: ServiceError) {
-        switch serviceError {
-        case .authExpired, .accountMismatch:
+    private func handleFailure(_ kind: UsageFailure.Kind) {
+        let outcome = SessionTransition.apply(
+            UsageFailure(kind: kind, provider: .chatgpt),
+            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
+        )
+        isAuthenticated = outcome.state.isAuthenticated
+        error = outcome.state.errorMessage
+        if outcome.discardsCredential {
             keychain.delete(key: .chatGPTCookies)
             cookieHeader = nil
-            isAuthenticated = false
-            error = "Session expired. Please sign in again."
-        case .httpError(let code):
-            error = "ChatGPT returned status \(code)"
-        case .network:
-            error = "Unable to connect to ChatGPT"
-        case .invalidResponse:
-            error = "Invalid response from ChatGPT"
         }
     }
 
@@ -322,14 +319,6 @@ final class ChatGPTService {
             guard let self, self.isActive else { return }
             await self.refresh()
         }
-    }
-
-    private enum ServiceError: Error {
-        case authExpired
-        case accountMismatch
-        case httpError(Int)
-        case network
-        case invalidResponse
     }
 }
 

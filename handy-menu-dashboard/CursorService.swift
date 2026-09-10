@@ -125,8 +125,8 @@ final class CursorService {
                 guard self.cookieHeader == cookieHeader else { return }
                 userName = me.name
             }
-        } catch let error as ServiceError {
-            handleServiceError(error)
+        } catch let kind as UsageFailure.Kind {
+            handleFailure(kind)
         } catch {
             self.error = "Failed to load Cursor usage"
         }
@@ -145,7 +145,7 @@ final class CursorService {
     private func performRequest(
         url: String,
         cookie: String
-    ) async throws(ServiceError) -> (Data, URLResponse) {
+    ) async throws(UsageFailure.Kind) -> (Data, URLResponse) {
         var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "GET"
         request.setValue(cookie, forHTTPHeaderField: "Cookie")
@@ -173,17 +173,16 @@ final class CursorService {
         return (data, response)
     }
 
-    private func handleServiceError(_ error: ServiceError) {
-        switch error {
-        case .authExpired:
-            isAuthenticated = false
-            self.error = "Session expired. Please sign in again."
-        case .httpError(let code):
-            self.error = "Cursor returned status \(code)"
-        case .network:
-            self.error = "Unable to connect to Cursor"
-        case .invalidResponse:
-            self.error = "Invalid response from Cursor"
+    private func handleFailure(_ kind: UsageFailure.Kind) {
+        let outcome = SessionTransition.apply(
+            UsageFailure(kind: kind, provider: .cursor),
+            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
+        )
+        isAuthenticated = outcome.state.isAuthenticated
+        error = outcome.state.errorMessage
+        if outcome.discardsCredential {
+            keychain.delete(key: .cursorCookies)
+            cookieHeader = nil
         }
     }
 
@@ -199,13 +198,6 @@ final class CursorService {
             guard let self, self.isActive else { return }
             await self.refresh()
         }
-    }
-
-    private enum ServiceError: Error {
-        case authExpired
-        case httpError(Int)
-        case network
-        case invalidResponse
     }
 }
 
