@@ -9,9 +9,6 @@ enum ChatGPTAuthenticationResult: Equatable {
 
 @Observable
 final class ChatGPTService {
-    var isLoading = false
-    var error: String?
-    var isAuthenticated = false
     var isEnabled = true
 
     var currentMonthUsage: Double = 0
@@ -19,10 +16,21 @@ final class ChatGPTService {
     var enforcementMode: String?
     var limitMode: String?
 
-    private var cookieHeader: String?
-    private let refreshLoop = RefreshLoop()
-    private let keychain: any KeychainStoring
-    private let transport: UsageTransport
+    @ObservationIgnored private let session: UsageSession
+    @ObservationIgnored private let refreshLoop = RefreshLoop()
+    @ObservationIgnored private let transport: UsageTransport
+
+    var isLoading: Bool { session.isLoading }
+
+    var isAuthenticated: Bool {
+        get { session.isAuthenticated }
+        set { session.isAuthenticated = newValue }
+    }
+
+    var error: String? {
+        get { session.errorMessage }
+        set { session.errorMessage = newValue }
+    }
 
     static let websiteDataDomains = ["chatgpt.com", "openai.com"]
 
@@ -61,10 +69,10 @@ final class ChatGPTService {
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true
     ) {
-        self.keychain = keychain
+        session = UsageSession(provider: .chatgpt, keychain: keychain)
         transport = UsageTransport(dataLoader: dataLoader)
         isEnabled = (UserDefaults.standard.object(forKey: "chatgptEnabled") as? Bool) ?? true
-        loadCredentials()
+        session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()
         }
@@ -78,19 +86,17 @@ final class ChatGPTService {
             return .failure(message)
         }
 
-        isLoading = true
+        session.isLoading = true
         error = nil
-        defer { isLoading = false }
+        defer { session.isLoading = false }
 
         do {
             let usage = try await loadUsage(cookieHeader: header)
-            keychain.saveString(key: .chatGPTCookies, value: header)
-            cookieHeader = header
+            session.persist(header)
             applyUsage(usage)
-            isAuthenticated = true
             return .authenticated
         } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
+            session.absorb(kind)
             switch kind {
             case .authExpired:
                 return .staleSession
@@ -105,9 +111,7 @@ final class ChatGPTService {
     }
 
     func clearCredentials() async {
-        keychain.delete(key: .chatGPTCookies)
-        cookieHeader = nil
-        isAuthenticated = false
+        session.discardCredential()
         currentMonthUsage = 0
         monthlyLimitCredits = 0
         enforcementMode = nil
@@ -117,22 +121,11 @@ final class ChatGPTService {
     }
 
     func refresh() async {
-        guard let cookieHeader, !cookieHeader.isEmpty else { return }
-
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-
-        do {
-            let usage = try await loadUsage(cookieHeader: cookieHeader)
-            guard self.cookieHeader == cookieHeader else { return }
-            applyUsage(usage)
-            isAuthenticated = true
-        } catch let kind as UsageFailure.Kind {
-            handleFailure(kind)
-        } catch {
-            self.error = "Invalid response from ChatGPT"
-        }
+        await session.run(
+            load: { try await self.loadUsage(cookieHeader: $0) },
+            apply: { self.applyUsage($0) },
+            unexpected: "Invalid response from ChatGPT"
+        )
     }
 
     private func loadUsage(cookieHeader: String) async throws -> ChatGPTUsageResponse {
@@ -247,26 +240,6 @@ final class ChatGPTService {
         return try await transport.data(
             for: UsageRequest(url: url, cookieHeader: cookieHeader, headers: headers)
         )
-    }
-
-    private func handleFailure(_ kind: UsageFailure.Kind) {
-        let outcome = SessionTransition.apply(
-            UsageFailure(kind: kind, provider: .chatgpt),
-            to: SessionState(isAuthenticated: isAuthenticated, errorMessage: error)
-        )
-        isAuthenticated = outcome.state.isAuthenticated
-        error = outcome.state.errorMessage
-        if outcome.discardsCredential {
-            keychain.delete(key: .chatGPTCookies)
-            cookieHeader = nil
-        }
-    }
-
-    private func loadCredentials() {
-        if let header = keychain.loadString(key: .chatGPTCookies), !header.isEmpty {
-            cookieHeader = header
-            isAuthenticated = true
-        }
     }
 
     private func startAutoRefresh() {
