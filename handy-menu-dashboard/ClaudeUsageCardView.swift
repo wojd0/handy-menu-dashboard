@@ -5,26 +5,7 @@ struct ClaudeUsageCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                ProviderTitle(provider: .claude)
-
-                Spacer()
-
-                if claudeService.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .frame(width: 16, height: 16)
-                } else {
-                    Button {
-                        Task { await claudeService.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
-            }
+            ProviderTitle(provider: .claude)
 
             if let error = claudeService.error {
                 Text(error)

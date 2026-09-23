@@ -39,6 +39,24 @@ struct DashboardView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
 
+                Button {
+                    Task { await services.refreshAll() }
+                } label: {
+                    if isRefreshing {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(width: 16, height: 16)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.title2)
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .disabled(isRefreshing)
+                .help("Refresh all services")
+                .accessibilityLabel("Refresh all services")
+
                 Spacer()
 
                 Button("Quit") {
@@ -57,6 +75,10 @@ struct DashboardView: View {
 
     private func isActive(_ provider: Provider) -> Bool {
         services[provider].isActive
+    }
+
+    private var isRefreshing: Bool {
+        Provider.allCases.contains { services[$0].isLoading }
     }
 
     @ViewBuilder
@@ -79,9 +101,7 @@ struct DashboardView: View {
             subtitle: service.subtitle,
             isOverLimit: reading.isOverLimit,
             isUnlimited: reading.isUnlimited,
-            isLoading: service.isLoading,
-            error: service.error,
-            onRefresh: { Task { await service.refresh() } }
+            error: service.error
         )
     }
 

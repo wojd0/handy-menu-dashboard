@@ -7,30 +7,11 @@ struct UsageCardView: View {
     let subtitle: String?
     let isOverLimit: Bool
     var isUnlimited = false
-    let isLoading: Bool
     let error: String?
-    let onRefresh: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                ProviderTitle(provider: provider)
-
-                Spacer()
-
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .frame(width: 16, height: 16)
-                } else {
-                    Button(action: onRefresh) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
-            }
+            ProviderTitle(provider: provider)
 
             if let error {
                 Text(error)
