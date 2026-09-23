@@ -5,11 +5,18 @@ import Testing
 @Suite("Login flow")
 struct LoginFlowTests {
     @Test func successfulValidationSignalsAuthentication() async {
+        var authenticatedCalls = 0
         let flow = makeFlow { _ in .authenticated }
+        flow.effects = LoginFlow.Effects(
+            clearWebsiteData: { _ in },
+            reload: {},
+            authenticated: { authenticatedCalls += 1 }
+        )
 
         await flow.harvested(makeCookies())
 
         #expect(flow.didAuthenticate)
+        #expect(authenticatedCalls == 1)
         #expect(flow.errorMessage == nil)
         #expect(flow.isValidating == false)
     }

@@ -18,6 +18,7 @@ final class LoginFlow {
     struct Effects {
         var clearWebsiteData: ([String]) async -> Void
         var reload: () -> Void
+        var authenticated: () -> Void = {}
     }
 
     private(set) var isValidating = false
@@ -51,6 +52,7 @@ final class LoginFlow {
         switch outcome {
         case .authenticated:
             didAuthenticate = true
+            effects?.authenticated()
         case .staleSession:
             lastCookies = nil
             errorMessage = "Session expired. Please sign in again."

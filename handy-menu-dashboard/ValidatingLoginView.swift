@@ -44,7 +44,8 @@ struct ValidatingLoginView: View {
                     harvest: provider.harvest,
                     flow: flow,
                     retryAttempt: retryAttempt,
-                    isLoading: $isLoading
+                    isLoading: $isLoading,
+                    onAuthenticated: { dismiss() }
                 )
 
                 if isLoading || flow.isValidating {
@@ -53,11 +54,6 @@ struct ValidatingLoginView: View {
             }
         }
         .frame(width: 500, height: 600)
-        .onChange(of: flow.didAuthenticate) { _, didAuthenticate in
-            if didAuthenticate {
-                dismiss()
-            }
-        }
     }
 }
 
@@ -66,6 +62,7 @@ struct ValidatingWebView: NSViewRepresentable {
     let flow: LoginFlow
     var retryAttempt: Int
     @Binding var isLoading: Bool
+    let onAuthenticated: () -> Void
 
     static func makeConfiguration() -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
@@ -86,11 +83,18 @@ struct ValidatingWebView: NSViewRepresentable {
             },
             reload: { [weak webView] in
                 webView?.load(URLRequest(url: startURL))
-            }
+            },
+            authenticated: onAuthenticated
         )
 
+        context.coordinator.observeCookies(in: webView)
         webView.load(URLRequest(url: startURL))
         return webView
+    }
+
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
+        coordinator.stopObservingCookies(in: nsView)
+        nsView.navigationDelegate = nil
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
@@ -102,11 +106,29 @@ struct ValidatingWebView: NSViewRepresentable {
         Coordinator(parent: self)
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
         var parent: ValidatingWebView
+        private weak var webView: WKWebView?
 
         init(parent: ValidatingWebView) {
             self.parent = parent
+        }
+
+        func observeCookies(in webView: WKWebView) {
+            self.webView = webView
+            webView.configuration.websiteDataStore.httpCookieStore.add(self)
+        }
+
+        func stopObservingCookies(in webView: WKWebView) {
+            webView.configuration.websiteDataStore.httpCookieStore.remove(self)
+            self.webView = nil
+        }
+
+        nonisolated func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
+            MainActor.assumeIsolated {
+                guard let webView else { return }
+                extractCookiesIfNeeded(from: webView)
+            }
         }
 
         nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

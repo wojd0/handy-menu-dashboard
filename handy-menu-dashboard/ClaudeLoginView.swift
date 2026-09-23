@@ -45,20 +45,44 @@ struct ClaudeWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = BrowserIdentity.userAgent
+        context.coordinator.observeCookies(in: webView)
         webView.load(URLRequest(url: Provider.claude.harvest.startURL))
         return webView
+    }
+
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
+        coordinator.stopObservingCookies(in: nsView)
+        nsView.navigationDelegate = nil
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {}
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
         let parent: ClaudeWebView
         private var hasExtracted = false
+        private weak var webView: WKWebView?
 
         init(parent: ClaudeWebView) {
             self.parent = parent
+        }
+
+        func observeCookies(in webView: WKWebView) {
+            self.webView = webView
+            webView.configuration.websiteDataStore.httpCookieStore.add(self)
+        }
+
+        func stopObservingCookies(in webView: WKWebView) {
+            webView.configuration.websiteDataStore.httpCookieStore.remove(self)
+            self.webView = nil
+        }
+
+        nonisolated func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
+            MainActor.assumeIsolated {
+                guard let webView else { return }
+                extractCookiesIfNeeded(from: webView)
+            }
         }
 
         nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
