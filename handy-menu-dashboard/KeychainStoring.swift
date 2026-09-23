@@ -16,6 +16,14 @@ protocol KeychainStoring {
     func delete(key: KeychainKey)
 }
 
+struct DisabledKeychainStore: KeychainStoring {
+    func save(key: KeychainKey, data: Data) {}
+
+    func load(key: KeychainKey) -> Data? { nil }
+
+    func delete(key: KeychainKey) {}
+}
+
 extension KeychainStoring {
     func saveString(key: KeychainKey, value: String) {
         guard let data = value.data(using: .utf8) else { return }

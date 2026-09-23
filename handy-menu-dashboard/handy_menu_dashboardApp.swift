@@ -2,10 +2,11 @@ import SwiftUI
 
 @main
 struct HandyMenuDashboardApp: App {
-    @State private var services = ServiceSet()
+    @State private var services: ServiceSet
     @AppStorage("menuBarInserted") private var menuBarInserted = true
 
     init() {
+        _services = State(initialValue: AppRuntime.makeServices())
         MenuBarDisplayMode.migrateLegacyPreferences()
     }
 
