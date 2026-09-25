@@ -1,6 +1,6 @@
 import Foundation
 
-struct CookieHarvest: Equatable {
+nonisolated struct CookieHarvest: Equatable {
     enum DomainMatch: Equatable {
         case exactOrSuffix(String)
         case contains(String)
@@ -12,6 +12,25 @@ struct CookieHarvest: Equatable {
             case .contains(let fragment):
                 domain.contains(fragment)
             }
+        }
+
+        func sqlPredicate(column: String) -> String {
+            switch self {
+            case .exactOrSuffix(let base):
+                let escaped = Self.escape(base)
+                return "(\(column) = '\(escaped)' OR \(column) = '.\(escaped)' OR \(column) LIKE '%.\(escaped)')"
+            case .contains(let fragment):
+                return "\(column) LIKE '%\(Self.escape(fragment))%'"
+            }
+        }
+
+        static func sqlWhereClause(_ filters: [DomainMatch], column: String, freshness: String) -> String {
+            let domains = filters.isEmpty ? "1" : filters.map { $0.sqlPredicate(column: column) }.joined(separator: " OR ")
+            return "(\(domains)) AND \(freshness)"
+        }
+
+        private static func escape(_ value: String) -> String {
+            value.replacingOccurrences(of: "'", with: "''")
         }
     }
 

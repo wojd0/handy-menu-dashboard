@@ -11,7 +11,11 @@ enum ProviderPreferences {
     static let claudeBaselineKey = "claudeMenuBarBaseline"
 
     static func isEnabled(_ provider: Provider, in store: any PreferenceStoring) -> Bool {
-        (store.object(forKey: provider.enabledKey) as? Bool) ?? true
+        (store.object(forKey: provider.enabledKey) as? Bool) ?? false
+    }
+
+    static func hasEnabledChoice(_ provider: Provider, in store: any PreferenceStoring) -> Bool {
+        store.object(forKey: provider.enabledKey) is Bool
     }
 
     static func setEnabled(_ value: Bool, for provider: Provider, in store: any PreferenceStoring) {

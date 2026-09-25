@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 @MainActor
@@ -12,8 +13,10 @@ protocol UsageDisplaying: AnyObject, Observable {
     var subtitle: String? { get }
     var menuBarText: String { get }
     var isActive: Bool { get }
+    var credentialHeader: String? { get }
     func refresh() async
     func clearCredentials() async
+    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome
 }
 
 extension UsageDisplaying {

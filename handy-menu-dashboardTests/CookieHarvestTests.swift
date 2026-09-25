@@ -82,6 +82,24 @@ struct CookieHarvestTests {
         #expect(Provider.copilot.harvest.websiteDataDomains == ["github.com"])
     }
 
+    @Test func containsDomainBuildsALikePredicate() {
+        let predicate = CookieHarvest.DomainMatch.contains("cursor.com").sqlPredicate(column: "host")
+
+        #expect(predicate == "host LIKE '%cursor.com%'")
+    }
+
+    @Test func exactOrSuffixDomainCoversTheBareAndDottedForms() {
+        let predicate = CookieHarvest.DomainMatch.exactOrSuffix("github.com").sqlPredicate(column: "host_key")
+
+        #expect(predicate == "(host_key = 'github.com' OR host_key = '.github.com' OR host_key LIKE '%.github.com')")
+    }
+
+    @Test func sqlPredicateEscapesSingleQuotes() {
+        let predicate = CookieHarvest.DomainMatch.contains("o'brien").sqlPredicate(column: "host")
+
+        #expect(predicate == "host LIKE '%o''brien%'")
+    }
+
     private func url(_ string: String) -> URL? {
         URL(string: string)
     }

@@ -6,7 +6,11 @@ struct HandyMenuDashboardApp: App {
     @AppStorage("menuBarInserted") private var menuBarInserted = true
 
     init() {
-        _services = State(initialValue: AppRuntime.makeServices())
+        let services = AppRuntime.makeServices()
+        services.sessionUpdates.onNotificationOpened = {
+            ConsentWindowController.shared.show(services: services)
+        }
+        _services = State(initialValue: services)
         MenuBarDisplayMode.migrateLegacyPreferences()
     }
 
@@ -36,8 +40,9 @@ struct MenuBarLabel: View {
         let lines = Provider.ordered(from: providerOrderRaw)
             .map { MenuBarLine(provider: $0, text: services[$0].menuBarText) }
             .filter { !$0.text.isEmpty }
+        let showsWarning = !services.sessionUpdates.pending.isEmpty
 
-        if let image = renderImage(lines: lines) {
+        if let image = renderImage(lines: lines, showsWarning: showsWarning) {
             Image(nsImage: image)
                 .renderingMode(.original)
         } else {
@@ -46,8 +51,8 @@ struct MenuBarLabel: View {
         }
     }
 
-    private func renderImage(lines: [MenuBarLine]) -> NSImage? {
-        guard !lines.isEmpty else { return nil }
+    private func renderImage(lines: [MenuBarLine], showsWarning: Bool) -> NSImage? {
+        guard !lines.isEmpty || showsWarning else { return nil }
 
         let columns = MenuBarLayout.columns(from: lines)
         let maximumRowCount = columns.map(\.count).max() ?? 1
@@ -73,6 +78,13 @@ struct MenuBarLabel: View {
                         }
                     }
                     .frame(height: columnHeight, alignment: .center)
+                }
+
+                if showsWarning {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: fontSize))
+                        .foregroundStyle(.yellow)
+                        .frame(height: columnHeight, alignment: .center)
                 }
             }
             .font(.system(size: fontSize))

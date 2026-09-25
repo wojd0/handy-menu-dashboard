@@ -4,8 +4,11 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     @Bindable var service: Service
     @Binding var draggedProvider: Provider?
     let signingOutProvider: Provider?
+    var isPending: Bool = false
+    var browserName: String?
     let onSignIn: () -> Void
     let onSignOut: () -> Void
+    let onUpdateFromBrowser: () -> Void
     @ViewBuilder let extra: Extra
 
     var body: some View {
@@ -15,12 +18,15 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 Image(systemName: provider.iconName)
                 Text(provider.displayName)
                     .font(.headline)
-                Spacer()
-                if service.isAuthenticated {
-                    Toggle("", isOn: $service.isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
+                if isPending {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.yellow)
+                        .help("Session needs updating")
                 }
+                Spacer()
+                Toggle("", isOn: $service.isEnabled)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
             }
 
             if service.isAuthenticated {
@@ -53,9 +59,14 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 Text(provider.signInBlurb)
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                Button(signInButtonTitle, action: onSignIn)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isBusy)
+                HStack {
+                    Button(updateButtonTitle, action: onUpdateFromBrowser)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isBusy)
+                    Button(signInButtonTitle, action: onSignIn)
+                        .buttonStyle(.bordered)
+                        .disabled(isBusy)
+                }
             }
         }
         .padding(16)
@@ -69,7 +80,11 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     private var signInButtonTitle: String {
         signingOutProvider == provider
             ? "Clearing browser session..."
-            : "Sign in to \(provider.displayName)..."
+            : "Sign in via browser..."
+    }
+
+    private var updateButtonTitle: String {
+        "Update from \(browserName ?? "Browser")…"
     }
 
     private var dragHandle: some View {
@@ -102,15 +117,21 @@ extension ProviderSettingsCard where Extra == EmptyView {
         service: Service,
         draggedProvider: Binding<Provider?>,
         signingOutProvider: Provider?,
+        isPending: Bool = false,
+        browserName: String? = nil,
         onSignIn: @escaping () -> Void,
-        onSignOut: @escaping () -> Void
+        onSignOut: @escaping () -> Void,
+        onUpdateFromBrowser: @escaping () -> Void
     ) {
         self.init(
             service: service,
             draggedProvider: draggedProvider,
             signingOutProvider: signingOutProvider,
+            isPending: isPending,
+            browserName: browserName,
             onSignIn: onSignIn,
             onSignOut: onSignOut,
+            onUpdateFromBrowser: onUpdateFromBrowser,
             extra: { EmptyView() }
         )
     }

@@ -5,36 +5,59 @@ struct ServiceSet {
     var copilot: CopilotService
     var claude: ClaudeService
     var chatgpt: ChatGPTService
+    var sessionUpdates: SessionUpdateCoordinator
 
     init(
         keychain: any KeychainStoring = KeychainStore(),
         dataLoader: @escaping UsageDataLoader = DefaultDataLoader.live,
         autoRefresh: Bool = true,
-        preferences: any PreferenceStoring = UserDefaults.standard
+        preferences: any PreferenceStoring = UserDefaults.standard,
+        browserReader: any BrowserCookieReading = LiveBrowserCookieReader(),
+        notifier: (any SessionUpdateNotifying)? = nil
     ) {
-        cursor = CursorService(
+        let notifier = notifier ?? UserNotificationsNotifier()
+        let cursor = CursorService(
             keychain: keychain,
             dataLoader: dataLoader,
             autoRefresh: autoRefresh,
             preferences: preferences
         )
-        copilot = CopilotService(
+        let copilot = CopilotService(
             keychain: keychain,
             dataLoader: dataLoader,
             autoRefresh: autoRefresh,
             preferences: preferences
         )
-        claude = ClaudeService(
+        let claude = ClaudeService(
             keychain: keychain,
             dataLoader: dataLoader,
             autoRefresh: autoRefresh,
             preferences: preferences
         )
-        chatgpt = ChatGPTService(
+        let chatgpt = ChatGPTService(
             keychain: keychain,
             dataLoader: dataLoader,
             autoRefresh: autoRefresh,
             preferences: preferences
+        )
+        self.cursor = cursor
+        self.copilot = copilot
+        self.claude = claude
+        self.chatgpt = chatgpt
+
+        sessionUpdates = SessionUpdateCoordinator(
+            resolve: { provider in
+                switch provider {
+                case .cursor: cursor
+                case .copilot: copilot
+                case .claude: claude
+                case .chatgpt: chatgpt
+                }
+            },
+            reader: browserReader,
+            notifier: notifier,
+            preferences: preferences,
+            observe: autoRefresh
         )
     }
 

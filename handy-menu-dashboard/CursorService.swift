@@ -92,11 +92,23 @@ final class CursorService: UsageDisplaying {
         }
     }
 
+    var credentialHeader: String? { session.cookieHeader }
+
     func saveCookies(_ cookies: [HTTPCookie]) {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return }
         session.persist(header)
         Task { await refresh() }
+    }
+
+    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
+        let header = CookieHeader.header(from: cookies)
+        guard !header.isEmpty else { return .failure("No Cursor cookies found") }
+
+        session.persist(header)
+        await refresh()
+
+        return isAuthenticated ? .authenticated : .failure(error ?? "Unable to sign in to Cursor")
     }
 
     func clearCredentials() async {

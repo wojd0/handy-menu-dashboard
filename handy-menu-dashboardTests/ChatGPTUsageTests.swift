@@ -86,6 +86,7 @@ struct ChatGPTUsageTests {
     @Test func menuBarSupportsCreditsAndPercentModes() {
         let service = makeService()
         service.isAuthenticated = true
+        service.isEnabled = true
         service.currentMonthUsage = 10_000
         service.monthlyLimitCredits = 40_000
 

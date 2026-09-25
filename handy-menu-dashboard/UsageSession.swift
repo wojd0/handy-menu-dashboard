@@ -48,6 +48,9 @@ final class UsageSession {
 
     func loadStoredCredential() {
         guard let header = keychain.loadString(key: provider.keychainKey), !header.isEmpty else { return }
+        if !ProviderPreferences.hasEnabledChoice(provider, in: preferences) {
+            isEnabled = true
+        }
         adopt(header)
     }
 
@@ -58,6 +61,7 @@ final class UsageSession {
 
     func persist(_ header: String) {
         keychain.saveString(key: provider.keychainKey, value: header)
+        isEnabled = true
         adopt(header)
     }
 

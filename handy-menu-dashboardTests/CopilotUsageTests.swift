@@ -25,6 +25,7 @@ struct CopilotUsageTests {
     @Test func formatsDashboardAndMenuBarCredits() {
         let service = makeService()
         service.isAuthenticated = true
+        service.isEnabled = true
         service.creditsUsed = 5_343
         service.creditsTotal = 350_000
         service.creditsRemaining = 344_657

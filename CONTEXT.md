@@ -41,7 +41,28 @@ not the same thing and must not be conflated. See `docs/adr/0002`.
 
 **Session** — an authenticated cookie header for one provider, plus everything that hangs off it:
 the Keychain entry, whether the provider is enabled, and the refresh loop. Sessions are
-established through a WebView sign-in, never a password.
+established either by harvesting the user's browser (with consent) or through a WebView sign-in,
+never a password.
+
+**Pending update** — a provider that `isEnabled && !isAuthenticated`: turned on but never connected,
+expired, or rejected. Computed, never stored. `SessionUpdateCoordinator.pending` lists them in
+provider order. A pending provider shows a warning in the menu bar, the popover and its Settings card.
+
+**Enabled** — a provider is off until it has a session. A stored credential with no saved choice
+turns it on at launch, and so does any sign-in. A provider the user never connected is off, so it is
+never pending.
+
+**Consent** — the app never reads the browser on its own. A pending provider raises the warnings
+and one edge-triggered notification; the user opens a dialog and **approves** a named harvest, or
+**skips** it (the warnings stay). Signing out also disables the provider so the warning does not
+return at once.
+
+**Cookie source** — which browser the harvest reads: the default browser (`.automatic`) or a
+chosen one. Stored under `browserCookieSource`.
+
+**Harvest result** — the outcome of one provider's harvest: `updated`, `notSignedInBrowser` (no
+session in the browser), `rejected` (validation failed), `accessDenied`/`keyDenied` (the sandbox or
+TCC blocked the read, so the manual clipboard fallback is offered), or `failed`.
 
 **Harvest** — the rule that decides when a sign-in WebView has produced a usable session: which
 host, which path, which cookie names. Per provider, expressed as data.

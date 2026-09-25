@@ -15,6 +15,39 @@ struct UsageSessionTests {
         #expect(session.isCurrent("s=1"))
     }
 
+    @Test func aStoredCredentialEnablesAProviderWithNoSavedChoice() {
+        let keychain = InMemoryKeychainStore()
+        keychain.saveString(key: .cursorCookies, value: "s=1")
+        let preferences = InMemoryPreferenceStore()
+        let session = makeSession(keychain: keychain, preferences: preferences)
+
+        session.loadStoredCredential()
+
+        #expect(session.isEnabled)
+        #expect(preferences.object(forKey: "cursorEnabled") as? Bool == true)
+    }
+
+    @Test func aStoredCredentialKeepsASavedDisabledChoice() {
+        let keychain = InMemoryKeychainStore()
+        keychain.saveString(key: .cursorCookies, value: "s=1")
+        let session = makeSession(keychain: keychain, preferences: InMemoryPreferenceStore(["cursorEnabled": false]))
+
+        session.loadStoredCredential()
+
+        #expect(session.isEnabled == false)
+        #expect(session.isAuthenticated)
+    }
+
+    @Test func aProviderWithoutACredentialStaysDisabled() {
+        let preferences = InMemoryPreferenceStore()
+        let session = makeSession(preferences: preferences)
+
+        session.loadStoredCredential()
+
+        #expect(session.isEnabled == false)
+        #expect(preferences.object(forKey: "cursorEnabled") == nil)
+    }
+
     @Test func anEmptyStoredCredentialIsIgnored() {
         let keychain = InMemoryKeychainStore()
         keychain.saveString(key: .cursorCookies, value: "")
@@ -33,6 +66,7 @@ struct UsageSessionTests {
 
         #expect(keychain.loadString(key: .cursorCookies) == "s=1")
         #expect(session.isAuthenticated)
+        #expect(session.isEnabled)
     }
 
     @Test func isCurrentComparesTheLiveCredential() {
@@ -173,8 +207,9 @@ struct UsageSessionTests {
 
     private func makeSession(
         provider: Provider = .cursor,
-        keychain: any KeychainStoring = InMemoryKeychainStore()
+        keychain: any KeychainStoring = InMemoryKeychainStore(),
+        preferences: any PreferenceStoring = InMemoryPreferenceStore()
     ) -> UsageSession {
-        UsageSession(provider: provider, keychain: keychain, preferences: InMemoryPreferenceStore())
+        UsageSession(provider: provider, keychain: keychain, preferences: preferences)
     }
 }

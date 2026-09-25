@@ -88,6 +88,12 @@ final class CopilotService: UsageDisplaying {
         }
     }
 
+    var credentialHeader: String? { session.cookieHeader }
+
+    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
+        await authenticate(with: cookies)
+    }
+
     func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
         let githubCookies = cookies.filter { cookie in
             cookie.domain == "github.com" || cookie.domain.hasSuffix(".github.com")

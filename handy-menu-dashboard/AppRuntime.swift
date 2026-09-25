@@ -12,7 +12,9 @@ enum AppRuntime {
 
         return ServiceSet(
             keychain: DisabledKeychainStore(),
-            autoRefresh: false
+            autoRefresh: false,
+            browserReader: DisabledBrowserCookieReader(),
+            notifier: DisabledNotifier()
         )
     }
 }

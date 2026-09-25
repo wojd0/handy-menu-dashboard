@@ -44,7 +44,8 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
 
 - **`UsageSession`** — Owns the refresh envelope (`run(load:apply:unexpected:)`: the cookie preamble, the
   loading flag, the staleness guard, the catch) and the credential lifecycle. Also owns `isEnabled` and
-  `menuBarDisplayMode`. Deliberately does **not** own the refresh loop — that would form a retain cycle a
+  `menuBarDisplayMode`. A provider is off until it has a session: a stored credential with no saved
+  choice, or any sign-in (`persist`), turns it on. Deliberately does **not** own the refresh loop — that would form a retain cycle a
   `@MainActor deinit` cannot break.
 - **`RefreshLoop`** — The 180-second loop and its cancellation. Deliberately **not** `@Observable`: the macro
   rewrites the stored task into a computed property, which makes `deinit` illegal.
@@ -65,6 +66,21 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   session-cookie rule, website-data domains.
 - **`LoginFlow`** — The reentrancy guard, retry latch and clear-then-reload recovery, lifted out of the
   WebView coordinator. Its side effects are installed by the coordinator in `makeNSView`, not injected at init.
+- **Browser harvest** — Reading the user's browser cookie stores, only after consent. `Browser`
+  carries per-browser facts (bundle IDs, profile paths, Safe Storage names) as data, like `Provider`.
+  `BrowserCookieReading` is the seam with `LiveBrowserCookieReader` (production) and
+  `DisabledBrowserCookieReader` (test host). Engines: `GeckoCookieStore` (Firefox/Zen SQLite),
+  `ChromiumCookieStore` + `ChromiumCookieCipher` (Chrome/Brave/Edge/Arc/Vivaldi/Chromium, key from
+  the Keychain), `SafariBinaryCookies` (Safari `binarycookies`). `SQLiteSnapshot` copies the locked
+  DB before reading. `ManualCookieImport` builds the copy-run-paste Terminal fallback for the
+  sandbox/TCC case. Nothing runs until `SessionUpdateCoordinator.approve`.
+- **`SessionUpdateCoordinator`** — Owns `pending`, the consent `phase` (one harvest at a time), the
+  edge-triggered notification (`SessionUpdateNotifying`) and the harvest. Held in `ServiceSet`.
+  `adoptBrowserCookies` on each service routes harvested cookies through the same adopt path as the
+  WebView sign-in. Sign Out disables the provider so its warning does not return immediately.
+  `UserNotificationsNotifier` is the notification-center delegate; a click calls `onNotificationOpened`,
+  which the `App` wires to `ConsentWindowController`. The panel hosts `SessionUpdateDialog` and shows
+  `ProviderLoginSheet` for the web-view fallback; Settings opens it for a single provider.
 - **`KeychainStoring` / `KeychainStore`** — Protocol + production implementation wrapping `SecItem*`. Tests
   use `InMemoryKeychainStore`. Keys prefixed `com.wojd0.dashboard.*`, with migration from the legacy format.
 - **`PreferenceStoring`** — Same pattern for `UserDefaults`. Tests use `InMemoryPreferenceStore` so the suite
@@ -90,8 +106,8 @@ tick; Copilot and ChatGPT **discard** it. This is deliberate and pinned by `Sess
 
 - **handy_menu_dashboardApp** — App entry point. `MenuBarExtra` shows the usage summary; a separate
   `Window("Settings", id: "settings")` is opened via `openWindow`. `MenuBarLabel` rasterises the fragments
-  through `ImageRenderer` — it must only read `menuBarText`, never `isLoading`, or every 3-minute refresh
-  re-renders the whole image.
+  through `ImageRenderer` — it reads `menuBarText` and `sessionUpdates.pending` (for the trailing
+  warning icon), never `isLoading`, or every 3-minute refresh re-renders the whole image.
 - **DashboardView** — Popover with a usage card per active provider, settings gear and quit button.
 - **UsageCardView** / **ClaudeUsageCardView** — Two deliberately different shapes: one headline percentage
   plus a bar, versus Claude's two pool rows gated on `hasSpend`/`hasCredit`.

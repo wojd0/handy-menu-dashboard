@@ -9,10 +9,7 @@ private struct DropIndicator: Equatable {
 
 struct SettingsView: View {
     let services: ServiceSet
-    @State private var showCursorLogin = false
-    @State private var showCopilotLogin = false
-    @State private var showClaudeLogin = false
-    @State private var showChatGPTLogin = false
+    @State private var loginProvider: Provider?
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @AppStorage("menuBarInserted") private var menuBarInserted = true
     @State private var launchAtLogin = false
@@ -46,17 +43,8 @@ struct SettingsView: View {
         .animation(.snappy, value: providerOrderRaw)
         .padding(20)
         .frame(width: 460)
-        .sheet(isPresented: $showCursorLogin) {
-            CursorLoginView(cursorService: services.cursor)
-        }
-        .sheet(isPresented: $showCopilotLogin) {
-            ValidatingLoginView(provider: .copilot) { await services.copilot.authenticate(with: $0) }
-        }
-        .sheet(isPresented: $showClaudeLogin) {
-            ClaudeLoginView(claudeService: services.claude)
-        }
-        .sheet(isPresented: $showChatGPTLogin) {
-            ValidatingLoginView(provider: .chatgpt) { await services.chatgpt.authenticate(with: $0) }
+        .sheet(item: $loginProvider) { provider in
+            ProviderLoginSheet(provider: provider, services: services)
         }
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -90,6 +78,8 @@ struct SettingsView: View {
             Toggle("Launch at Login", isOn: $launchAtLogin)
                 .toggleStyle(.switch)
 
+            browserCookiesRow
+
             HStack {
                 if menuBarInserted {
                     Label("In menu bar", systemImage: "checkmark.circle.fill")
@@ -109,30 +99,55 @@ struct SettingsView: View {
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
+    private var browserCookiesRow: some View {
+        @Bindable var coordinator = services.sessionUpdates
+
+        return HStack {
+            Text("Browser Cookies")
+                .font(.callout)
+            Spacer()
+            BrowserSourcePicker(title: "", source: $coordinator.source)
+                .labelsHidden()
+            .fixedSize()
+        }
+    }
+
     @ViewBuilder
     private func section(for provider: Provider) -> some View {
         switch provider {
         case .cursor:
-            card(services.cursor) { showCursorLogin = true }
+            card(services.cursor)
         case .copilot:
-            card(services.copilot) { showCopilotLogin = true }
+            card(services.copilot)
         case .claude:
             claudeCard()
         case .chatgpt:
-            card(services.chatgpt) { showChatGPTLogin = true }
+            card(services.chatgpt)
         }
     }
 
-    private func card<Service: UsageDisplaying>(
-        _ service: Service,
-        onSignIn: @escaping () -> Void
-    ) -> some View {
+    private var browserName: String? {
+        services.sessionUpdates.resolvedBrowser?.displayName
+    }
+
+    private func isPending(_ provider: Provider) -> Bool {
+        services.sessionUpdates.pending.contains(provider)
+    }
+
+    private func updateFromBrowser(_ provider: Provider) {
+        ConsentWindowController.shared.show(services: services, providers: [provider])
+    }
+
+    private func card<Service: UsageDisplaying>(_ service: Service) -> some View {
         ProviderSettingsCard(
             service: service,
             draggedProvider: $draggedProvider,
             signingOutProvider: signingOutProvider,
-            onSignIn: onSignIn,
-            onSignOut: { signOut(service.provider) }
+            isPending: isPending(service.provider),
+            browserName: browserName,
+            onSignIn: { loginProvider = service.provider },
+            onSignOut: { signOut(service.provider) },
+            onUpdateFromBrowser: { updateFromBrowser(service.provider) }
         )
     }
 
@@ -143,8 +158,11 @@ struct SettingsView: View {
             service: claude,
             draggedProvider: $draggedProvider,
             signingOutProvider: signingOutProvider,
-            onSignIn: { showClaudeLogin = true },
-            onSignOut: { signOut(claude.provider) }
+            isPending: isPending(claude.provider),
+            browserName: browserName,
+            onSignIn: { loginProvider = .claude },
+            onSignOut: { signOut(claude.provider) },
+            onUpdateFromBrowser: { updateFromBrowser(.claude) }
         ) {
             HStack {
                 Text("Baseline")
@@ -186,6 +204,8 @@ struct SettingsView: View {
 
         Task {
             await services[provider].clearCredentials()
+            services[provider].isEnabled = false
+            services.sessionUpdates.refreshPending()
             signingOutProvider = nil
         }
     }

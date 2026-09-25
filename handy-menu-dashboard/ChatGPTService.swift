@@ -82,6 +82,12 @@ final class ChatGPTService: UsageDisplaying {
         }
     }
 
+    var credentialHeader: String? { session.cookieHeader }
+
+    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
+        await authenticate(with: cookies)
+    }
+
     func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty, CookieHeader.value(named: "_account", in: header) != nil else {

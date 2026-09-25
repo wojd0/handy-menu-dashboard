@@ -25,15 +25,17 @@ struct ProviderPreferencesTests {
         #expect(ProviderPreferences.claudeBaselineKey == "claudeMenuBarBaseline")
     }
 
-    @Test func providersAreEnabledUntilTurnedOff() {
+    @Test func providersAreDisabledUntilTurnedOn() {
         let store = InMemoryPreferenceStore()
 
-        #expect(ProviderPreferences.isEnabled(.cursor, in: store))
-
-        ProviderPreferences.setEnabled(false, for: .cursor, in: store)
-
         #expect(ProviderPreferences.isEnabled(.cursor, in: store) == false)
-        #expect(ProviderPreferences.isEnabled(.claude, in: store))
+        #expect(ProviderPreferences.hasEnabledChoice(.cursor, in: store) == false)
+
+        ProviderPreferences.setEnabled(true, for: .cursor, in: store)
+
+        #expect(ProviderPreferences.isEnabled(.cursor, in: store))
+        #expect(ProviderPreferences.hasEnabledChoice(.cursor, in: store))
+        #expect(ProviderPreferences.isEnabled(.claude, in: store) == false)
     }
 
     @Test func displayModeRoundTripsPerProvider() {
