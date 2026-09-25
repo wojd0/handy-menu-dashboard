@@ -106,8 +106,10 @@ final class UsageSession {
             isAuthenticated = true
             apply(payload)
         } catch let kind as UsageFailure.Kind {
+            guard isCurrent(cookieHeader) else { return }
             absorb(kind)
         } catch {
+            guard isCurrent(cookieHeader) else { return }
             errorMessage = unexpected
         }
     }

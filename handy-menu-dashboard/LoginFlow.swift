@@ -31,6 +31,7 @@ final class LoginFlow {
     @ObservationIgnored private var isAuthenticating = false
     @ObservationIgnored private var lastCookies: [HTTPCookie]?
     @ObservationIgnored private var handledRetryAttempt = 0
+    @ObservationIgnored private var awaitsNavigation = false
 
     init(harvest: CookieHarvest, authenticate: @escaping ([HTTPCookie]) async -> LoginOutcome) {
         self.harvest = harvest
@@ -39,8 +40,9 @@ final class LoginFlow {
 
     var canReplayLastCookies: Bool { lastCookies != nil }
 
-    func harvested(_ cookies: [HTTPCookie]) async {
-        guard !isAuthenticating else { return }
+    func harvested(_ cookies: [HTTPCookie], fromCookieChange: Bool = false) async {
+        guard !isAuthenticating, !(fromCookieChange && awaitsNavigation) else { return }
+        awaitsNavigation = false
         isAuthenticating = true
         lastCookies = cookies
         errorMessage = nil
@@ -61,6 +63,7 @@ final class LoginFlow {
             effects?.reload()
         case .failure(let message):
             isAuthenticating = false
+            awaitsNavigation = true
             errorMessage = message
         }
     }

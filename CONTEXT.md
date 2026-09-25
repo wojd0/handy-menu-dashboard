@@ -6,7 +6,7 @@ terms exactly.
 ## Domain
 
 **Provider** — one coding-agent account whose usage the app tracks: Cursor, GitHub Copilot,
-Claude, ChatGPT. Modelled as a `nonisolated` enum. It is a value: `Codable` + `Transferable`
+Claude, ChatGPT. Modelled as an enum. It is a value: `Codable` + `Transferable`
 (the drag payload for reordering), `Hashable` (the `cardHeights` key), and the `ForEach`
 identity in the dashboard and settings. It carries per-provider facts, never behaviour.
 
@@ -48,18 +48,18 @@ host, which path, which cookie names. Per provider, expressed as data.
 
 **Credential policy** — two orthogonal per-provider facts, deliberately not one flag:
 `clearsCredentialOnAuthExpiry` (Copilot and ChatGPT discard on 401/403; Cursor and Claude retain,
-so a transient Cloudflare 403 self-heals on the next tick) and `validatesBeforePersisting`
+so a transient Cloudflare 403 self-heals on the next refresh) and whether it validates before persisting
 (Copilot and ChatGPT prove the session works before writing to the Keychain; Cursor and Claude
 currently do not).
 
 ## Modules
 
 **UsageReading** — the single definition of percent, over-limit, the menu-bar fragment and the
-dashboard detail string. A `nonisolated Sendable` value. Formatting varies along two independent
+dashboard detail string. A plain value type. Formatting varies along two independent
 axes: **AmountStyle** (menu bar) and **DetailStyle** (dashboard). They are not diagonal — Cursor
 and Claude share an amount style but not a detail style.
 
-**UsageSession** — owns the refresh envelope (`run(load:apply:fail:)`: the cookie preamble, the
+**UsageSession** — owns the refresh envelope (`run(load:apply:unexpected:)`: the cookie preamble, the
 loading flag, the staleness guard, the catch) and the credential lifecycle. Owns the enabled flag
 and display mode via **ProviderPreferences**. Does *not* own the refresh loop — that would form a
 retain cycle a `@MainActor deinit` cannot break.

@@ -38,7 +38,6 @@ final class ChatGPTService: UsageDisplaying {
         set { session.errorMessage = newValue }
     }
 
-
     var reading: UsageReading {
         UsageReading(
             used: currentMonthUsage,

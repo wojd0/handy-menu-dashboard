@@ -113,7 +113,7 @@ final class CursorService: UsageDisplaying {
         await session.run(
             load: { cookie in
                 let summary = try await self.fetchUsageSummary(cookie: cookie)
-                let name = self.userName == nil ? try await self.fetchMe(cookie: cookie).name : nil
+                let name = self.userName == nil ? (try? await self.fetchMe(cookie: cookie))?.name : nil
                 return CursorPayload(summary: summary, userName: name)
             },
             apply: { payload in

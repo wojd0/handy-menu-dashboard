@@ -124,6 +124,22 @@ struct CursorUsageTests {
         #expect(service.error == nil)
     }
 
+    @Test func refreshKeepsUsageWhenTheUserNameLookupFails() async {
+        let service = makeAuthenticatedService { request in
+            if request.url!.path == "/api/auth/me" {
+                return try httpResponse(for: request, status: 500, json: [:])
+            }
+            return try stub(for: request)
+        }
+
+        await service.refresh()
+
+        #expect(service.spendCents == 5_000)
+        #expect(service.userName == nil)
+        #expect(service.isAuthenticated)
+        #expect(service.error == nil)
+    }
+
     @Test func refreshResolvesUserNameOnlyOnce() async {
         var paths: [String] = []
         let service = makeAuthenticatedService { request in

@@ -88,6 +88,25 @@ struct UsageSessionTests {
         #expect(applied == false)
     }
 
+    @Test func runIgnoresAFailureThatArrivesAfterTheCredentialChanged() async {
+        let keychain = InMemoryKeychainStore()
+        let session = makeSession(provider: .copilot, keychain: keychain)
+        session.persist("first")
+
+        await session.run(
+            load: { _ -> Int in
+                session.persist("second")
+                throw UsageFailure.Kind.authExpired
+            },
+            apply: { _ in },
+            unexpected: "unexpected"
+        )
+
+        #expect(session.isAuthenticated)
+        #expect(session.errorMessage == nil)
+        #expect(keychain.loadString(key: .copilotCookies) == "second")
+    }
+
     @Test func runMapsAnUnrecognisedErrorToItsOwnMessage() async {
         let session = makeSession()
         session.adopt("s=1")
@@ -156,6 +175,6 @@ struct UsageSessionTests {
         provider: Provider = .cursor,
         keychain: any KeychainStoring = InMemoryKeychainStore()
     ) -> UsageSession {
-        UsageSession(provider: provider, keychain: keychain)
+        UsageSession(provider: provider, keychain: keychain, preferences: InMemoryPreferenceStore())
     }
 }

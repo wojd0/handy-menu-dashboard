@@ -81,6 +81,22 @@ struct LoginFlowTests {
         #expect(flow.didAuthenticate)
     }
 
+    @Test func aFailureIgnoresCookieChangesUntilTheNextNavigation() async {
+        var calls = 0
+        let flow = makeFlow { _ in
+            calls += 1
+            return .failure("nope")
+        }
+        await flow.harvested(makeCookies())
+
+        await flow.harvested(makeCookies(), fromCookieChange: true)
+        let callsAfterCookieChange = calls
+        await flow.harvested(makeCookies())
+
+        #expect(callsAfterCookieChange == 1)
+        #expect(calls == 2)
+    }
+
     @Test func retryReplaysTheCookiesFromTheFailedAttempt() async {
         var calls = 0
         let flow = makeFlow { _ in

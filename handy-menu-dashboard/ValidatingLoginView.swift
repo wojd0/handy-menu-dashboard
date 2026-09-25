@@ -127,7 +127,7 @@ struct ValidatingWebView: NSViewRepresentable {
         nonisolated func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             MainActor.assumeIsolated {
                 guard let webView else { return }
-                extractCookiesIfNeeded(from: webView)
+                extractCookiesIfNeeded(from: webView, fromCookieChange: true)
             }
         }
 
@@ -154,7 +154,7 @@ struct ValidatingWebView: NSViewRepresentable {
             }
         }
 
-        private func extractCookiesIfNeeded(from webView: WKWebView) {
+        private func extractCookiesIfNeeded(from webView: WKWebView, fromCookieChange: Bool = false) {
             let harvest = parent.harvest
             let flow = parent.flow
             guard harvest.acceptsNavigation(to: webView.url) else { return }
@@ -162,7 +162,7 @@ struct ValidatingWebView: NSViewRepresentable {
             webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
                 guard let sessionCookies = harvest.sessionCookies(from: cookies) else { return }
                 Task { @MainActor in
-                    await flow.harvested(sessionCookies)
+                    await flow.harvested(sessionCookies, fromCookieChange: fromCookieChange)
                 }
             }
         }

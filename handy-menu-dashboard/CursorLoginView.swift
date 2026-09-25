@@ -63,6 +63,7 @@ struct CursorWebView: NSViewRepresentable {
         let parent: CursorWebView
         private var hasExtracted = false
         private weak var webView: WKWebView?
+        private var pendingExtraction: Task<Void, Never>?
 
         init(parent: CursorWebView) {
             self.parent = parent
@@ -74,6 +75,7 @@ struct CursorWebView: NSViewRepresentable {
         }
 
         func stopObservingCookies(in webView: WKWebView) {
+            pendingExtraction?.cancel()
             webView.configuration.websiteDataStore.httpCookieStore.remove(self)
             self.webView = nil
         }
@@ -81,20 +83,29 @@ struct CursorWebView: NSViewRepresentable {
         nonisolated func cookiesDidChange(in cookieStore: WKHTTPCookieStore) {
             MainActor.assumeIsolated {
                 guard let webView else { return }
-                extractCookiesIfNeeded(from: webView)
+                scheduleExtraction(from: webView)
             }
         }
 
         nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             MainActor.assumeIsolated {
                 parent.isLoading = false
-                extractCookiesIfNeeded(from: webView)
+                scheduleExtraction(from: webView)
             }
         }
 
         nonisolated func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             MainActor.assumeIsolated {
                 parent.isLoading = true
+            }
+        }
+
+        private func scheduleExtraction(from webView: WKWebView) {
+            pendingExtraction?.cancel()
+            pendingExtraction = Task { @MainActor [weak self, weak webView] in
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self, let webView else { return }
+                self.extractCookiesIfNeeded(from: webView)
             }
         }
 
