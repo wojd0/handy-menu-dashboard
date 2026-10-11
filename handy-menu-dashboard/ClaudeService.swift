@@ -5,14 +5,18 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
     case usageLimit
     case credit
     case combined
+    case session
+    case weekly
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .usageLimit: "General"
-        case .credit: "Code and Cowork"
+        case .credit: "Credit"
         case .combined: "Combined"
+        case .session: "Session (5h)"
+        case .weekly: "Weekly"
         }
     }
 }
@@ -21,7 +25,7 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 final class ClaudeService: UsageDisplaying {
     let provider = Provider.claude
 
-    var reading: UsageReading { reading(for: baseline) }
+    var reading: UsageReading { reading(for: resolvedBaseline) }
 
     var isEnabled: Bool {
         get { session.isEnabled }
@@ -42,7 +46,7 @@ final class ClaudeService: UsageDisplaying {
     }
 
     var menuBarText: String {
-        menuBarFragment(baseline: baseline, displayMode: menuBarDisplayMode)
+        menuBarFragment(baseline: resolvedBaseline, displayMode: menuBarDisplayMode)
     }
 
     var spendUsedDollars: Double = 0
@@ -50,8 +54,14 @@ final class ClaudeService: UsageDisplaying {
     var creditUsedDollars: Double = 0
     var creditLimitDollars: Double = 0
     var creditRemainingDollars: Double = 0
+    var sessionPercent: Double = 0
+    var sessionResetsAt: Date?
+    var weeklyPercent: Double = 0
+    var weeklyResetsAt: Date?
     var hasSpend = false
     var hasCredit = false
+    var hasSession = false
+    var hasWeekly = false
 
     private var storedBaseline: ClaudeBaseline
 
@@ -78,6 +88,27 @@ final class ClaudeService: UsageDisplaying {
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
+    var availableBaselines: [ClaudeBaseline] {
+        ClaudeBaseline.allCases.filter(hasPool(for:))
+    }
+
+    var resolvedBaseline: ClaudeBaseline {
+        if hasPool(for: baseline) { return baseline }
+        if hasSession { return .session }
+        if hasWeekly { return .weekly }
+        return baseline
+    }
+
+    func hasPool(for baseline: ClaudeBaseline) -> Bool {
+        switch baseline {
+        case .usageLimit: hasSpend
+        case .credit: hasCredit
+        case .combined: hasSpend && hasCredit
+        case .session: hasSession
+        case .weekly: hasWeekly
+        }
+    }
+
     func reading(for baseline: ClaudeBaseline) -> UsageReading {
         switch baseline {
         case .usageLimit:
@@ -86,11 +117,19 @@ final class ClaudeService: UsageDisplaying {
             makeReading(used: creditUsedDollars, limit: creditLimitDollars)
         case .combined:
             makeReading(used: combinedUsedDollars, limit: combinedLimitDollars)
+        case .session:
+            makeWindowReading(percent: sessionPercent)
+        case .weekly:
+            makeWindowReading(percent: weeklyPercent)
         }
     }
 
     private func makeReading(used: Double, limit: Double) -> UsageReading {
         UsageReading(used: used, limit: limit, amountStyle: .wholeDollars, detailStyle: .dollars)
+    }
+
+    private func makeWindowReading(percent: Double) -> UsageReading {
+        UsageReading(used: percent, limit: 100, amountStyle: .percent, detailStyle: .percent)
     }
 
     func percentUsed(for baseline: ClaudeBaseline) -> Double {
@@ -152,8 +191,14 @@ final class ClaudeService: UsageDisplaying {
         creditUsedDollars = 0
         creditLimitDollars = 0
         creditRemainingDollars = 0
+        sessionPercent = 0
+        sessionResetsAt = nil
+        weeklyPercent = 0
+        weeklyResetsAt = nil
         hasSpend = false
         hasCredit = false
+        hasSession = false
+        hasWeekly = false
         error = nil
         await WebAuthSession.clearAllWebsiteData()
     }
@@ -195,18 +240,38 @@ final class ClaudeService: UsageDisplaying {
             spendUsedDollars = UsageMath.dollars(amountMinor: used.amountMinor, exponent: used.exponent)
             spendLimitDollars = UsageMath.dollars(amountMinor: limit.amountMinor, exponent: limit.exponent)
             hasSpend = true
+        } else {
+            spendUsedDollars = 0
+            spendLimitDollars = 0
+            hasSpend = false
         }
 
-        if let pool = response.cinderCove {
+        if let pool = response.creditPool {
             creditUsedDollars = pool.usedDollars ?? 0
             creditLimitDollars = pool.limitDollars ?? 0
-            if let remaining = pool.remainingDollars {
-                creditRemainingDollars = remaining
-            } else {
-                creditRemainingDollars = creditLimitDollars - creditUsedDollars
-            }
+            creditRemainingDollars = pool.remainingDollars ?? creditLimitDollars - creditUsedDollars
             hasCredit = true
+        } else {
+            creditUsedDollars = 0
+            creditLimitDollars = 0
+            creditRemainingDollars = 0
+                hasCredit = false
         }
+
+        let session = response.fiveHour?.utilization
+        sessionPercent = session ?? 0
+        sessionResetsAt = session == nil ? nil : response.fiveHour?.resetsAt.flatMap(Self.parseDate)
+        hasSession = session != nil
+
+        let weekly = response.sevenDay?.utilization
+        weeklyPercent = weekly ?? 0
+        weeklyResetsAt = weekly == nil ? nil : response.sevenDay?.resetsAt.flatMap(Self.parseDate)
+        hasWeekly = weekly != nil
+    }
+
+    static func parseDate(_ text: String) -> Date? {
+        let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        return (try? fractional.parse(text)) ?? (try? Date.ISO8601FormatStyle().parse(text))
     }
 
     private func request(url: String, cookieHeader: String) async throws(UsageFailure.Kind) -> Data {

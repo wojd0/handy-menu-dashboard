@@ -12,27 +12,53 @@ struct ClaudeUsageCardView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             } else {
+                if claudeService.hasSession {
+                    poolRow(
+                        title: "Session (5h)",
+                        percent: claudeService.sessionPercent,
+                        resetsAt: claudeService.sessionResetsAt
+                    )
+                }
+
+                if claudeService.hasWeekly {
+                    poolRow(
+                        title: "Weekly",
+                        percent: claudeService.weeklyPercent,
+                        resetsAt: claudeService.weeklyResetsAt
+                    )
+                }
+
                 if claudeService.hasSpend {
                     poolRow(
                         title: "General",
-                        used: claudeService.spendUsedDollars,
-                        limit: claudeService.spendLimitDollars
+                        percent: UsageMath.percentUsed(
+                            used: claudeService.spendUsedDollars,
+                            limit: claudeService.spendLimitDollars
+                        ),
+                        detail: claudeService.detailText(for: .usageLimit)
                     )
                 }
 
                 if claudeService.hasCredit {
                     poolRow(
-                        title: "Code and Cowork",
-                        used: claudeService.creditUsedDollars,
-                        limit: claudeService.creditLimitDollars
+                        title: "Credit",
+                        percent: UsageMath.percentUsed(
+                            used: claudeService.creditUsedDollars,
+                            limit: claudeService.creditLimitDollars
+                        ),
+                        detail: claudeService.detailText(for: .credit)
                     )
                 }
             }
         }
     }
 
-    private func poolRow(title: String, used: Double, limit: Double) -> some View {
-        let percent = UsageMath.percentUsed(used: used, limit: limit)
+    private func poolRow(
+        title: String,
+        percent: Double,
+        detail: String? = nil,
+        resetsAt: Date? = nil
+    ) -> some View {
         let isOverLimit = UsageMath.isOverLimit(percentUsed: percent)
 
         return VStack(alignment: .leading, spacing: 4) {
@@ -55,9 +81,17 @@ struct ClaudeUsageCardView: View {
                 }
             }
 
-            Text("\(UsageMath.formatDollars(used)) / \(UsageMath.formatDollars(limit))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if let detail {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let resetsAt {
+                Text(UsageMath.resetText(for: resetsAt))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             UsageProgressBar(percentage: percent, isOverLimit: isOverLimit)
         }

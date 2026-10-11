@@ -93,8 +93,12 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
 - **CopilotService** — Fetches credit quota via the undocumented GitHub web entitlement endpoint
   (`/github-copilot/chat/entitlement`). Validates before persisting; an account with no quota is rejected.
 - **ClaudeService** — Fetches `claude.ai/api/organizations/{orgId}/usage`. Org ID comes from the
-  `lastActiveOrg` cookie, falling back to `/api/organizations`. Tracks two pools: **spend** (usage limit) and
-  **cinder_cove** (Claude Code & Cowork credit), with three baselines (`usageLimit`, `credit`, `combined`).
+  `lastActiveOrg` cookie, falling back to `/api/organizations`. Tracks four pools: **spend** (usage limit),
+  **credit** (monthly dollar pool; the payload key is obfuscated and changes, so
+  `ClaudeUsageResponse` takes `cinder_cove` or the first other object with `limit_dollars`), and the
+  subscription windows **session** (`five_hour`) and **weekly** (`seven_day`), which report percent only.
+  Five baselines (`usageLimit`, `credit`, `combined`, `session`, `weekly`). Each refresh replaces all pools, so
+  a pool that leaves the payload clears. `resolvedBaseline` falls back to session, then weekly, when the chosen pool is empty.
 - **ChatGPTService** — Fetches monthly credits from the account's spend-control endpoint. Refreshes the bearer
   token through the session endpoint and verifies its account claim against the `_account` cookie.
 

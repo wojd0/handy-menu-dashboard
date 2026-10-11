@@ -4,6 +4,7 @@ enum AmountStyle {
     case wholeDollars
     case abbreviatedCredits
     case compactCredits
+    case percent
 
     func text(used: Double, limit: Double, isUnlimited: Bool) -> String {
         switch self {
@@ -15,6 +16,8 @@ enum AmountStyle {
         case .compactCredits:
             "\(UsageMath.formatCompactNumber(used))/"
                 + (isUnlimited ? UsageMath.infinitySymbol : UsageMath.formatCompactNumber(limit))
+        case .percent:
+            "\(Int(used.rounded()))%"
         }
     }
 }
@@ -23,6 +26,7 @@ enum DetailStyle {
     case dollarsWholeLimit
     case dollars
     case credits
+    case percent
 
     func text(used: Double, limit: Double, isUnlimited: Bool) -> String {
         switch self {
@@ -34,6 +38,8 @@ enum DetailStyle {
             "\(UsageMath.formatCredits(used)) / "
                 + (isUnlimited ? UsageMath.infinitySymbol : UsageMath.formatCredits(limit))
                 + " credits"
+        case .percent:
+            "\(Int(used.rounded()))% used"
         }
     }
 }

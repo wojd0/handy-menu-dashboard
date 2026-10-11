@@ -15,11 +15,15 @@ account is unlimited. Always expressed in **dollars or credits, never cents**. T
 percent-used, percent-remaining, over-limit and the strings derived from them.
 
 **Pool** — one metered bucket within a provider. Claude is the only provider with more than one:
-**spend** (the general usage limit) and **credit** (the Claude Code & Cowork pool, `cinder_cove`
-in the payload).
+**spend** (the general usage limit), **credit** (a monthly dollar pool with its own reset date) and the
+two subscription windows, **session** (`five_hour`) and **weekly** (`seven_day`). The windows report
+percent only, with a reset time. The credit pool key is obfuscated and changes (`cinder_cove`,
+`iguana_necktie`). The decoder takes `cinder_cove` first, then the first other object that has `limit_dollars`.
 
-**Baseline** — which Claude pool the menu bar reports: General, Code and Cowork, or Combined.
-Claude-only; no other provider has one.
+**Baseline** — which Claude pool the menu bar reports: General, Credit, Combined, Session or
+Weekly. Claude-only; no other provider has one. Settings lists only the baselines that have data.
+Combined needs both spend and credit. If the chosen pool has no data, the menu bar uses Session
+(then Weekly) instead. This is `resolvedBaseline`.
 
 **Menu-bar fragment** — the short string one provider contributes to the menu-bar image, e.g.
 `$150/100`, `5.3K/350K`, `98%`. Fragments are laid out into columns and rasterised through

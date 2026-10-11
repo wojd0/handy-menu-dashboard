@@ -281,6 +281,117 @@ struct ClaudeUsageTests {
         #expect(service.isAuthenticated == false)
     }
 
+    @Test func refreshAppliesSubscriptionWindowsAndRenamedCreditPool() async {
+        let service = makeAuthenticatedService { request in
+            try self.stub(for: request, usage: self.subscriptionJSON())
+        }
+
+        await service.refresh()
+
+        #expect(service.hasSession)
+        #expect(service.sessionPercent == 13)
+        #expect(service.hasWeekly)
+        #expect(service.weeklyPercent == 3)
+        #expect(service.hasCredit)
+        #expect(service.creditUsedDollars == 18.831743)
+        #expect(service.creditLimitDollars == 100)
+        #expect(service.hasSpend == false)
+    }
+
+    @Test func refreshParsesResetTimesWithAndWithoutFractionalSeconds() async {
+        let service = makeAuthenticatedService { request in
+            try self.stub(for: request, usage: self.subscriptionJSON())
+        }
+
+        await service.refresh()
+
+        let sessionReset = service.sessionResetsAt
+        let plainReset = ClaudeService.parseDate("2026-11-05T07:59:00+00:00")
+        #expect(sessionReset == ClaudeService.parseDate("2026-10-11T04:00:00+00:00")?.addingTimeInterval(0.131147))
+        #expect(plainReset == Date(timeIntervalSince1970: 1_793_865_540))
+    }
+
+    @Test func refreshClearsPoolsMissingFromLaterResponse() async {
+        var payload = usageJSON()
+        let service = makeAuthenticatedService { request in
+            try self.stub(for: request, usage: payload)
+        }
+        await service.refresh()
+        payload = subscriptionJSON(includeCredit: false)
+
+        await service.refresh()
+
+        #expect(service.hasSpend == false)
+        #expect(service.spendUsedDollars == 0)
+        #expect(service.hasCredit == false)
+        #expect(service.creditLimitDollars == 0)
+        #expect(service.hasSession)
+    }
+
+    @Test func menuBarFallsBackToSessionWhenChosenPoolIsMissing() {
+        let service = makeService(authenticated: true)
+        service.baseline = .usageLimit
+        service.hasSession = true
+        service.sessionPercent = 13
+
+        #expect(service.resolvedBaseline == .session)
+        #expect(service.menuBarText == "13%")
+    }
+
+    @Test func menuBarKeepsChosenPoolWhenItHasData() {
+        let service = makeService(authenticated: true)
+        service.baseline = .usageLimit
+        service.hasSpend = true
+        service.spendUsedDollars = 5
+        service.spendLimitDollars = 100
+        service.hasSession = true
+        service.sessionPercent = 13
+
+        #expect(service.resolvedBaseline == .usageLimit)
+        #expect(service.menuBarText == "$5/100")
+    }
+
+    @Test func resetTextShowsHoursAndMinutesBelowSixHours() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(4 * 3600 + 12 * 60 + 30), now: now) == "Resets in 4h 12m")
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(2 * 3600), now: now) == "Resets in 2h")
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(45 * 60), now: now) == "Resets in 45m")
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(-5), now: now) == "Resets now")
+    }
+
+    @Test func resetTextUsesRelativeWordingFromSixHours() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(7 * 3600), now: now) == "Resets in 7 hours")
+        #expect(UsageMath.resetText(for: now.addingTimeInterval(3 * 86400), now: now) == "Resets in 3 days")
+    }
+
+    @Test func availableBaselinesListOnlyPoolsWithData() {
+        let service = makeService()
+        service.hasSession = true
+        service.hasWeekly = true
+        service.hasCredit = true
+
+        #expect(service.availableBaselines == [.credit, .session, .weekly])
+
+        service.hasSpend = true
+
+        #expect(service.availableBaselines == [.usageLimit, .credit, .combined, .session, .weekly])
+    }
+
+    @Test func sessionAndWeeklyBaselinesReadPercentWindows() {
+        let service = makeService(authenticated: true)
+        service.sessionPercent = 13
+        service.weeklyPercent = 3
+
+        #expect(service.percentUsed(for: .session) == 13)
+        #expect(service.percentRemaining(for: .weekly) == 97)
+        #expect(service.menuBarFragment(baseline: .session, displayMode: .monetary) == "13%")
+        #expect(service.menuBarFragment(baseline: .weekly, displayMode: .percentRemaining) == "97%")
+        #expect(service.detailText(for: .session) == "13% used")
+    }
+
     private var sessionCookieHeader: String { "sessionKey=sk-test; lastActiveOrg=org-123" }
 
     private func usageJSON(includeRemaining: Bool = true) -> [String: Any] {
@@ -301,6 +412,39 @@ struct ClaudeUsageTests {
             ],
             "cinder_cove": pool
         ]
+    }
+
+    private func subscriptionJSON(includeCredit: Bool = true) -> [String: Any] {
+        var json: [String: Any] = [
+            "five_hour": [
+                "utilization": 13.0,
+                "resets_at": "2026-10-11T04:00:00.131147+00:00",
+                "limit_dollars": NSNull()
+            ],
+            "seven_day": [
+                "utilization": 3.0,
+                "resets_at": "2026-10-17T06:00:00.131170+00:00",
+                "limit_dollars": NSNull()
+            ],
+            "cinder_cove": NSNull(),
+            "extra_usage": ["is_enabled": false, "monthly_limit": NSNull()],
+            "limits": [["kind": "session", "percent": 13]],
+            "spend": [
+                "used": ["amount_minor": 0, "currency": "USD", "exponent": 2],
+                "limit": NSNull(),
+                "enabled": false
+            ]
+        ]
+        if includeCredit {
+            json["iguana_necktie"] = [
+                "utilization": 18.831743,
+                "resets_at": "2026-11-05T07:59:00+00:00",
+                "limit_dollars": 100,
+                "used_dollars": 18.831743,
+                "remaining_dollars": 81.168257
+            ]
+        }
+        return json
     }
 
     private func stub(

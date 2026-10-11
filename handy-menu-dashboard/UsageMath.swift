@@ -24,6 +24,28 @@ enum UsageMath {
         return 100 - percentUsed(used: used, limit: limit)
     }
 
+    static func resetText(for date: Date, now: Date = Date()) -> String {
+        let seconds = date.timeIntervalSince(now)
+        guard seconds > 0 else { return "Resets now" }
+
+        let sixHours: TimeInterval = 6 * 3600
+        if seconds < sixHours {
+            let totalMinutes = max(1, Int(seconds / 60))
+            let hours = totalMinutes / 60
+            let minutes = totalMinutes % 60
+            switch (hours, minutes) {
+            case (0, _): return "Resets in \(minutes)m"
+            case (_, 0): return "Resets in \(hours)h"
+            default: return "Resets in \(hours)h \(minutes)m"
+            }
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        formatter.dateTimeStyle = .named
+        return "Resets " + formatter.localizedString(for: date, relativeTo: now)
+    }
+
     static func dollars(amountMinor: Int, exponent: Int) -> Double {
         Double(amountMinor) / pow(10.0, Double(exponent))
     }
@@ -116,8 +138,40 @@ struct ClaudeUsageResponse: Decodable {
         let resetsAt: String?
     }
 
+    struct Window: Decodable {
+        let utilization: Double?
+        let resetsAt: String?
+    }
+
+    private struct AnyKey: CodingKey {
+        let stringValue: String
+        let intValue: Int? = nil
+
+        init(_ stringValue: String) { self.stringValue = stringValue }
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) { return nil }
+    }
+
     let spend: Spend?
-    let cinderCove: CreditPool?
+    let creditPool: CreditPool?
+    let fiveHour: Window?
+    let sevenDay: Window?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyKey.self)
+        spend = try container.decodeIfPresent(Spend.self, forKey: AnyKey("spend"))
+        fiveHour = try container.decodeIfPresent(Window.self, forKey: AnyKey("fiveHour"))
+        sevenDay = try container.decodeIfPresent(Window.self, forKey: AnyKey("sevenDay"))
+
+        if let known = try container.decodeIfPresent(CreditPool.self, forKey: AnyKey("cinderCove")) {
+            creditPool = known
+        } else {
+            let others = container.allKeys.sorted { $0.stringValue < $1.stringValue }
+            creditPool = others
+                .compactMap { try? container.decode(CreditPool.self, forKey: $0) }
+                .first { $0.limitDollars != nil }
+        }
+    }
 }
 
 struct CursorUsageSummaryResponse: Decodable {

@@ -154,6 +154,8 @@ struct SettingsView: View {
     private func claudeCard() -> some View {
         @Bindable var claude = services.claude
 
+        let baselines = claude.availableBaselines
+
         return ProviderSettingsCard(
             service: claude,
             draggedProvider: $draggedProvider,
@@ -164,16 +166,23 @@ struct SettingsView: View {
             onSignOut: { signOut(claude.provider) },
             onUpdateFromBrowser: { updateFromBrowser(.claude) }
         ) {
-            HStack {
-                Text("Baseline")
-                    .font(.callout)
-                Picker("", selection: $claude.baseline) {
-                    ForEach(ClaudeBaseline.allCases) { baseline in
-                        Text(baseline.label).tag(baseline)
+            if baselines.count > 1 {
+                HStack {
+                    Text("Baseline")
+                        .font(.callout)
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { claude.resolvedBaseline },
+                        set: { claude.baseline = $0 }
+                    )) {
+                        ForEach(baselines) { baseline in
+                            Text(baseline.label).tag(baseline)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
             }
         }
     }
