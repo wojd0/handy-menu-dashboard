@@ -11,7 +11,9 @@ nonisolated enum ManualCookieImport {
                 freshness: GeckoCookieStore.freshness
             )
             return [
-                "DB=$(ls -t \(root)/Profiles/*/cookies.sqlite \(root)/*/cookies.sqlite 2>/dev/null | head -1)",
+                "DB=$(find \(root) -maxdepth 3 -name cookies.sqlite -exec ls -t {} + | head -1)",
+                "{ [ -n \"$DB\" ] || { echo 'No cookies.sqlite found. If you see Operation not permitted, " +
+                    "give Terminal Full Disk Access.'; false; }; }",
                 "cp \"$DB\" \"$TMPDIR/hmd-gecko.sqlite\"",
                 "{ cp \"$DB-wal\" \"$TMPDIR/hmd-gecko.sqlite-wal\" 2>/dev/null || true; }",
                 "sqlite3 -separator $'\\t' \"$TMPDIR/hmd-gecko.sqlite\" " +

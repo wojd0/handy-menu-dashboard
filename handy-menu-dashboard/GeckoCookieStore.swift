@@ -28,8 +28,11 @@ nonisolated struct GeckoCookieStore {
 
     private func defaultProfile() throws(BrowserCookieError) -> URL {
         let iniURL = profilesRoot.appending(path: "profiles.ini")
-        guard let contents = try? String(contentsOf: iniURL, encoding: .utf8) else {
-            throw .noProfile
+        let contents: String
+        do {
+            contents = try String(contentsOf: iniURL, encoding: .utf8)
+        } catch {
+            throw BrowserCookieError.classifyRead(error)
         }
 
         let sections = Self.sections(in: contents)

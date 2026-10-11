@@ -37,6 +37,22 @@ struct GeckoCookieStoreTests {
         #expect(thrown == .noProfile)
     }
 
+    @Test func reportsAccessDeniedWhenTheProfilesFileIsNotReadable() throws {
+        let root = setupProfile()
+        let ini = root.appending(path: "profiles.ini")
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: ini.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: ini.path) }
+
+        var thrown: BrowserCookieError?
+        do {
+            _ = try GeckoCookieStore(profilesRoot: root).cookies(matching: [])
+        } catch {
+            thrown = error
+        }
+
+        #expect(thrown == .accessDenied)
+    }
+
     private func setupProfile() -> URL {
         let root = SQLiteTestDatabase.makeDirectory()
         let profileDir = root.appending(path: "Profiles/abc.default")
