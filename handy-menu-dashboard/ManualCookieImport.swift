@@ -70,10 +70,18 @@ nonisolated enum ManualCookieImport {
         }
     }
 
+    private struct EncryptedRow {
+        let host: String
+        let name: String
+        let value: String
+        let path: String
+        let encrypted: Data
+    }
+
     private static func parseChromium(_ text: String) throws(BrowserCookieError) -> [BrowserCookie] {
         var password: String?
         var version = 0
-        var rows: [(host: String, name: String, value: String, path: String, encrypted: Data)] = []
+        var rows: [EncryptedRow] = []
 
         for line in text.split(whereSeparator: \.isNewline) {
             let columns = line.components(separatedBy: "\t")
@@ -84,7 +92,7 @@ nonisolated enum ManualCookieImport {
                 version = Int(columns[1]) ?? 0
             case "C" where columns.count >= 6:
                 let encrypted = columns[5].isEmpty ? Data() : dataFromHex(columns[5]) ?? Data()
-                rows.append((columns[1], columns[2], columns[3], columns[4], encrypted))
+                rows.append(EncryptedRow(host: columns[1], name: columns[2], value: columns[3], path: columns[4], encrypted: encrypted))
             default:
                 continue
             }

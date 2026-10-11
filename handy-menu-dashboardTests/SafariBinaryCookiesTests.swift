@@ -5,7 +5,7 @@ import Testing
 @Suite("Safari binary cookies")
 struct SafariBinaryCookiesTests {
     @Test func parsesASingleCookieRecord() throws {
-        let data = buildFile(cookie: ("github.com", "user_session", "abc123", "/"))
+        let data = buildFile(cookie: BrowserCookie(domain: "github.com", name: "user_session", value: "abc123"))
 
         let cookies = try SafariBinaryCookies.parse(data)
 
@@ -36,7 +36,7 @@ struct SafariBinaryCookiesTests {
         #expect(thrown == .unreadable)
     }
 
-    private func buildFile(cookie: (domain: String, name: String, value: String, path: String)) -> Data {
+    private func buildFile(cookie: BrowserCookie) -> Data {
         let record = buildRecord(cookie)
 
         var page = Data()
@@ -54,7 +54,7 @@ struct SafariBinaryCookiesTests {
         return file
     }
 
-    private func buildRecord(_ cookie: (domain: String, name: String, value: String, path: String)) -> Data {
+    private func buildRecord(_ cookie: BrowserCookie) -> Data {
         let stringsStart = 48
         let domainBytes = Data((cookie.domain + "\0").utf8)
         let nameBytes = Data((cookie.name + "\0").utf8)

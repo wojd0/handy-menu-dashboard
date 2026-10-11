@@ -68,6 +68,109 @@ struct CopilotUsageTests {
         #expect(service.menuBarFragment(displayMode: .percentUsed) == "∞%")
     }
 
+    private func makeService() -> CopilotService {
+        CopilotService(
+            keychain: InMemoryKeychainStore(),
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
+    }
+
+    private func makeCookies() -> [HTTPCookie] {
+        [
+            HTTPCookie(properties: [
+                .domain: ".github.com",
+                .path: "/",
+                .name: "user_session",
+                .value: "test-session",
+                .secure: "TRUE"
+            ])!,
+            HTTPCookie(properties: [
+                .domain: ".github.com",
+                .path: "/",
+                .name: "dotcom_user",
+                .value: "octocat"
+            ])!
+        ]
+    }
+
+    private func entitlementJSON(
+        total: Double,
+        used: Double,
+        remaining: Double?,
+        hasQuota: Bool = true,
+        unlimited: Bool = false
+    ) -> [String: Any] {
+        var quotas: [String: Any] = [
+            "premiumInteractionsQuota": [
+                "total": total,
+                "used": used,
+                "hasQuota": hasQuota,
+                "unlimited": unlimited
+            ]
+        ]
+        if let remaining {
+            quotas["remaining"] = ["premiumInteractions": remaining]
+        }
+        return ["quotas": quotas]
+    }
+
+    private func response(
+        for request: URLRequest,
+        status: Int = 200,
+        json: Any
+    ) throws -> (Data, URLResponse) {
+        try response(for: request, status: status, data: JSONSerialization.data(withJSONObject: json))
+    }
+
+    private func response(
+        for request: URLRequest,
+        status: Int = 200,
+        data: Data
+    ) throws -> (Data, URLResponse) {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: status,
+            httpVersion: "HTTP/2",
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        return (data, response)
+    }
+
+    private var samplePayload: Data {
+        Data(
+            """
+            {
+              "licenseType": "licensed_full",
+              "quotas": {
+                "limits": { "premiumInteractions": 350000 },
+                "remaining": {
+                  "premiumInteractions": 344657,
+                  "chatPercentage": 100.0,
+                  "premiumInteractionsPercentage": 98.4
+                },
+                "resetDate": "2026-10-01",
+                "resetDateUtc": "2026-10-01T00:00:00.000Z",
+                "overagesEnabled": true,
+                "tokenBasedBillingEnabled": true,
+                "premiumInteractionsQuota": {
+                  "percentRemaining": 98.4,
+                  "total": 350000,
+                  "used": 5343.0,
+                  "hasQuota": true,
+                  "unlimited": false,
+                  "creditsUsed": 5342
+                }
+              },
+              "plan": "enterprise",
+              "trial": { "eligible": false }
+            }
+            """.utf8
+        )
+    }
+}
+
+extension CopilotUsageTests {
     @Test func authenticationPersistsCookiesOnlyAfterValidation() async throws {
         let keychain = InMemoryKeychainStore()
         var requests: [URLRequest] = []
@@ -310,106 +413,5 @@ struct CopilotUsageTests {
         #expect(result == .authenticated)
         #expect(service.percentRemaining == -25)
         #expect(service.menuBarFragment(displayMode: .percentRemaining) == "-25%")
-    }
-
-    private func makeService() -> CopilotService {
-        CopilotService(
-            keychain: InMemoryKeychainStore(),
-            autoRefresh: false,
-            preferences: InMemoryPreferenceStore()
-        )
-    }
-
-    private func makeCookies() -> [HTTPCookie] {
-        [
-            HTTPCookie(properties: [
-                .domain: ".github.com",
-                .path: "/",
-                .name: "user_session",
-                .value: "test-session",
-                .secure: "TRUE"
-            ])!,
-            HTTPCookie(properties: [
-                .domain: ".github.com",
-                .path: "/",
-                .name: "dotcom_user",
-                .value: "octocat"
-            ])!
-        ]
-    }
-
-    private func entitlementJSON(
-        total: Double,
-        used: Double,
-        remaining: Double?,
-        hasQuota: Bool = true,
-        unlimited: Bool = false
-    ) -> [String: Any] {
-        var quotas: [String: Any] = [
-            "premiumInteractionsQuota": [
-                "total": total,
-                "used": used,
-                "hasQuota": hasQuota,
-                "unlimited": unlimited
-            ]
-        ]
-        if let remaining {
-            quotas["remaining"] = ["premiumInteractions": remaining]
-        }
-        return ["quotas": quotas]
-    }
-
-    private func response(
-        for request: URLRequest,
-        status: Int = 200,
-        json: Any
-    ) throws -> (Data, URLResponse) {
-        try response(for: request, status: status, data: JSONSerialization.data(withJSONObject: json))
-    }
-
-    private func response(
-        for request: URLRequest,
-        status: Int = 200,
-        data: Data
-    ) throws -> (Data, URLResponse) {
-        let response = HTTPURLResponse(
-            url: request.url!,
-            statusCode: status,
-            httpVersion: "HTTP/2",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        return (data, response)
-    }
-
-    private var samplePayload: Data {
-        Data(
-            """
-            {
-              "licenseType": "licensed_full",
-              "quotas": {
-                "limits": { "premiumInteractions": 350000 },
-                "remaining": {
-                  "premiumInteractions": 344657,
-                  "chatPercentage": 100.0,
-                  "premiumInteractionsPercentage": 98.4
-                },
-                "resetDate": "2026-10-01",
-                "resetDateUtc": "2026-10-01T00:00:00.000Z",
-                "overagesEnabled": true,
-                "tokenBasedBillingEnabled": true,
-                "premiumInteractionsQuota": {
-                  "percentRemaining": 98.4,
-                  "total": 350000,
-                  "used": 5343.0,
-                  "hasQuota": true,
-                  "unlimited": false,
-                  "creditsUsed": 5342
-                }
-              },
-              "plan": "enterprise",
-              "trial": { "eligible": false }
-            }
-            """.utf8
-        )
     }
 }

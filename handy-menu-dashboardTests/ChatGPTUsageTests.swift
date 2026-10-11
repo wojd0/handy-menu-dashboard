@@ -108,6 +108,58 @@ struct ChatGPTUsageTests {
         }
     }
 
+    private func makeService() -> ChatGPTService {
+        ChatGPTService(
+            keychain: InMemoryKeychainStore(),
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
+    }
+
+    private func makeJWT(accountID: String) -> String {
+        let payload = "{\"https://api.openai.com/auth\":{\"chatgpt_account_id\":\"\(accountID)\"}}"
+        let data = Data(payload.utf8)
+        let encoded = data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        return "header.\(encoded).signature"
+    }
+
+    private func makeCookies() -> [HTTPCookie] {
+        [
+            HTTPCookie(properties: [
+                .domain: ".chatgpt.com",
+                .path: "/",
+                .name: "_account",
+                .value: accountID
+            ])!,
+            HTTPCookie(properties: [
+                .domain: ".chatgpt.com",
+                .path: "/",
+                .name: "__Secure-next-auth.session-token.0",
+                .value: "test"
+            ])!
+        ]
+    }
+
+    private func response(
+        for request: URLRequest,
+        status: Int = 200,
+        json: Any
+    ) throws -> (Data, URLResponse) {
+        let data = try JSONSerialization.data(withJSONObject: json)
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: status,
+            httpVersion: "HTTP/2",
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        return (data, response)
+    }
+}
+
+extension ChatGPTUsageTests {
     @Test func authenticationPersistsCookiesOnlyAfterValidation() async throws {
         let keychain = InMemoryKeychainStore()
         let token = makeJWT(accountID: accountID)
@@ -309,55 +361,5 @@ struct ChatGPTUsageTests {
 
         #expect(!service.isAuthenticated)
         #expect(service.error == "Session expired. Please sign in again.")
-    }
-
-    private func makeService() -> ChatGPTService {
-        ChatGPTService(
-            keychain: InMemoryKeychainStore(),
-            autoRefresh: false,
-            preferences: InMemoryPreferenceStore()
-        )
-    }
-
-    private func makeJWT(accountID: String) -> String {
-        let payload = "{\"https://api.openai.com/auth\":{\"chatgpt_account_id\":\"\(accountID)\"}}"
-        let data = Data(payload.utf8)
-        let encoded = data.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-        return "header.\(encoded).signature"
-    }
-
-    private func makeCookies() -> [HTTPCookie] {
-        [
-            HTTPCookie(properties: [
-                .domain: ".chatgpt.com",
-                .path: "/",
-                .name: "_account",
-                .value: accountID
-            ])!,
-            HTTPCookie(properties: [
-                .domain: ".chatgpt.com",
-                .path: "/",
-                .name: "__Secure-next-auth.session-token.0",
-                .value: "test"
-            ])!
-        ]
-    }
-
-    private func response(
-        for request: URLRequest,
-        status: Int = 200,
-        json: Any
-    ) throws -> (Data, URLResponse) {
-        let data = try JSONSerialization.data(withJSONObject: json)
-        let response = HTTPURLResponse(
-            url: request.url!,
-            statusCode: status,
-            httpVersion: "HTTP/2",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        return (data, response)
     }
 }

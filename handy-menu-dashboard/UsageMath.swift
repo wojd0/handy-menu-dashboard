@@ -99,18 +99,18 @@ enum UsageMath {
 }
 
 struct CopilotEntitlementResponse: Decodable {
+    struct Remaining: Decodable {
+        let premiumInteractions: Double?
+    }
+
+    struct PremiumInteractionsQuota: Decodable {
+        let total: Double
+        let used: Double
+        let hasQuota: Bool?
+        let unlimited: Bool?
+    }
+
     struct Quotas: Decodable {
-        struct Remaining: Decodable {
-            let premiumInteractions: Double?
-        }
-
-        struct PremiumInteractionsQuota: Decodable {
-            let total: Double
-            let used: Double
-            let hasQuota: Bool?
-            let unlimited: Bool?
-        }
-
         let remaining: Remaining?
         let premiumInteractionsQuota: PremiumInteractionsQuota?
     }

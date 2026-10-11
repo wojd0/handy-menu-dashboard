@@ -169,6 +169,78 @@ struct ClaudeUsageTests {
         #expect(service.detailText(for: .combined) == "$12.89 / $4000.00")
     }
 
+    private var sessionCookieHeader: String { "sessionKey=sk-test; lastActiveOrg=org-123" }
+
+    private func usageJSON(includeRemaining: Bool = true) -> [String: Any] {
+        var pool: [String: Any] = [
+            "utilization": 0.0105,
+            "limit_dollars": 1000,
+            "used_dollars": 10.5,
+            "resets_at": "2026-10-01T00:00:00Z"
+        ]
+        if includeRemaining {
+            pool["remaining_dollars"] = 989.5
+        }
+        return [
+            "spend": [
+                "used": ["amount_minor": 239, "exponent": 2],
+                "limit": ["amount_minor": 300_000, "exponent": 2],
+                "enabled": true
+            ],
+            "cinder_cove": pool
+        ]
+    }
+
+    private func subscriptionJSON(includeCredit: Bool = true) -> [String: Any] {
+        var json: [String: Any] = [
+            "five_hour": [
+                "utilization": 13.0,
+                "resets_at": "2026-10-11T04:00:00.131147+00:00",
+                "limit_dollars": NSNull()
+            ],
+            "seven_day": [
+                "utilization": 3.0,
+                "resets_at": "2026-10-17T06:00:00.131170+00:00",
+                "limit_dollars": NSNull()
+            ],
+            "cinder_cove": NSNull(),
+            "extra_usage": ["is_enabled": false, "monthly_limit": NSNull()],
+            "limits": [["kind": "session", "percent": 13]],
+            "spend": [
+                "used": ["amount_minor": 0, "currency": "USD", "exponent": 2],
+                "limit": NSNull(),
+                "enabled": false
+            ]
+        ]
+        if includeCredit {
+            json["iguana_necktie"] = [
+                "utilization": 18.831743,
+                "resets_at": "2026-11-05T07:59:00+00:00",
+                "limit_dollars": 100,
+                "used_dollars": 18.831743,
+                "remaining_dollars": 81.168257
+            ]
+        }
+        return json
+    }
+
+    private func stub(
+        for request: URLRequest,
+        usage: [String: Any]? = nil
+    ) throws -> (Data, URLResponse) {
+        try httpResponse(for: request, json: usage ?? usageJSON())
+    }
+
+    private func makeAuthenticatedService(
+        dataLoader: @escaping UsageDataLoader
+    ) -> ClaudeService {
+        let keychain = InMemoryKeychainStore()
+        keychain.saveString(key: .claudeCookies, value: sessionCookieHeader)
+        return makeService(authenticated: true, keychain: keychain, dataLoader: dataLoader)
+    }
+}
+
+extension ClaudeUsageTests {
     @Test func refreshResolvesOrgFromCookieAndAppliesBothPools() async {
         var paths: [String] = []
         let service = makeAuthenticatedService { request in
@@ -390,75 +462,5 @@ struct ClaudeUsageTests {
         #expect(service.menuBarFragment(baseline: .session, displayMode: .monetary) == "13%")
         #expect(service.menuBarFragment(baseline: .weekly, displayMode: .percentRemaining) == "97%")
         #expect(service.detailText(for: .session) == "13% used")
-    }
-
-    private var sessionCookieHeader: String { "sessionKey=sk-test; lastActiveOrg=org-123" }
-
-    private func usageJSON(includeRemaining: Bool = true) -> [String: Any] {
-        var pool: [String: Any] = [
-            "utilization": 0.0105,
-            "limit_dollars": 1000,
-            "used_dollars": 10.5,
-            "resets_at": "2026-10-01T00:00:00Z"
-        ]
-        if includeRemaining {
-            pool["remaining_dollars"] = 989.5
-        }
-        return [
-            "spend": [
-                "used": ["amount_minor": 239, "exponent": 2],
-                "limit": ["amount_minor": 300_000, "exponent": 2],
-                "enabled": true
-            ],
-            "cinder_cove": pool
-        ]
-    }
-
-    private func subscriptionJSON(includeCredit: Bool = true) -> [String: Any] {
-        var json: [String: Any] = [
-            "five_hour": [
-                "utilization": 13.0,
-                "resets_at": "2026-10-11T04:00:00.131147+00:00",
-                "limit_dollars": NSNull()
-            ],
-            "seven_day": [
-                "utilization": 3.0,
-                "resets_at": "2026-10-17T06:00:00.131170+00:00",
-                "limit_dollars": NSNull()
-            ],
-            "cinder_cove": NSNull(),
-            "extra_usage": ["is_enabled": false, "monthly_limit": NSNull()],
-            "limits": [["kind": "session", "percent": 13]],
-            "spend": [
-                "used": ["amount_minor": 0, "currency": "USD", "exponent": 2],
-                "limit": NSNull(),
-                "enabled": false
-            ]
-        ]
-        if includeCredit {
-            json["iguana_necktie"] = [
-                "utilization": 18.831743,
-                "resets_at": "2026-11-05T07:59:00+00:00",
-                "limit_dollars": 100,
-                "used_dollars": 18.831743,
-                "remaining_dollars": 81.168257
-            ]
-        }
-        return json
-    }
-
-    private func stub(
-        for request: URLRequest,
-        usage: [String: Any]? = nil
-    ) throws -> (Data, URLResponse) {
-        try httpResponse(for: request, json: usage ?? usageJSON())
-    }
-
-    private func makeAuthenticatedService(
-        dataLoader: @escaping UsageDataLoader
-    ) -> ClaudeService {
-        let keychain = InMemoryKeychainStore()
-        keychain.saveString(key: .claudeCookies, value: sessionCookieHeader)
-        return makeService(authenticated: true, keychain: keychain, dataLoader: dataLoader)
     }
 }

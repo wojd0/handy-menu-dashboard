@@ -164,27 +164,28 @@ struct SettingsView: View {
             browserName: browserName,
             onSignIn: { loginProvider = .claude },
             onSignOut: { signOut(claude.provider) },
-            onUpdateFromBrowser: { updateFromBrowser(.claude) }
-        ) {
-            if baselines.count > 1 {
-                HStack {
-                    Text("Baseline")
-                        .font(.callout)
-                    Spacer()
-                    Picker("", selection: Binding(
-                        get: { claude.resolvedBaseline },
-                        set: { claude.baseline = $0 }
-                    )) {
-                        ForEach(baselines) { baseline in
-                            Text(baseline.label).tag(baseline)
+            onUpdateFromBrowser: { updateFromBrowser(.claude) },
+            extra: {
+                if baselines.count > 1 {
+                    HStack {
+                        Text("Baseline")
+                            .font(.callout)
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { claude.resolvedBaseline },
+                            set: { claude.baseline = $0 }
+                        )) {
+                            ForEach(baselines) { baseline in
+                                Text(baseline.label).tag(baseline)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
                 }
             }
-        }
+        )
     }
 
     @ViewBuilder
