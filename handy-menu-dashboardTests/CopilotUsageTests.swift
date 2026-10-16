@@ -200,6 +200,27 @@ extension CopilotUsageTests {
         #expect(requests[0].value(forHTTPHeaderField: "User-Agent") == BrowserIdentity.userAgent)
     }
 
+    @Test func browserImportDoesNotPersistAfterApprovalIsRevokedDuringValidation() async {
+        let keychain = InMemoryKeychainStore()
+        var approved = true
+        let service = CopilotService(
+            keychain: keychain,
+            dataLoader: { request in
+                approved = false
+                return try response(for: request, data: samplePayload)
+            },
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
+
+        let result = await service.adoptBrowserCookies(makeCookies(), ifAllowed: { approved })
+
+        #expect(result == .failure("Session update cancelled"))
+        #expect(!service.isAuthenticated)
+        #expect(!service.isEnabled)
+        #expect(keychain.loadString(key: .copilotCookies) == nil)
+    }
+
     @Test func authenticationRequiresGitHubSessionCookie() async {
         var requestCount = 0
         let service = CopilotService(
@@ -363,20 +384,6 @@ extension CopilotUsageTests {
         #expect(service.isAuthenticated)
         #expect(service.error == "Invalid response from GitHub")
         #expect(keychain.loadString(key: .copilotCookies) != nil)
-    }
-
-    @Test func initializationRemovesLegacyCredentials() {
-        let keychain = InMemoryKeychainStore()
-        keychain.saveString(key: .copilotUsername, value: "octocat")
-        keychain.saveString(key: .copilotPAT, value: "github_pat_test")
-        keychain.saveString(key: .copilotEntitlement, value: "300")
-
-        let service = CopilotService(keychain: keychain, autoRefresh: false, preferences: InMemoryPreferenceStore())
-
-        #expect(!service.isAuthenticated)
-        #expect(keychain.loadString(key: .copilotUsername) == nil)
-        #expect(keychain.loadString(key: .copilotPAT) == nil)
-        #expect(keychain.loadString(key: .copilotEntitlement) == nil)
     }
 
     @Test func percentRemainingIsTheComplementEvenWhenTheServerDisagrees() async {

@@ -71,12 +71,6 @@ final class UsageSession {
         isAuthenticated = false
     }
 
-    func purgeLegacy(_ keys: [KeychainKey]) {
-        for key in keys {
-            keychain.delete(key: key)
-        }
-    }
-
     func isCurrent(_ header: String) -> Bool {
         cookieHeader == header
     }

@@ -193,18 +193,6 @@ struct UsageSessionTests {
         #expect(keychain.loadString(key: .copilotCookies) == "s=1")
     }
 
-    @Test func purgeLegacyRemovesSupersededKeys() {
-        let keychain = InMemoryKeychainStore()
-        keychain.saveString(key: .copilotPAT, value: "pat")
-        keychain.saveString(key: .copilotUsername, value: "octocat")
-        let session = makeSession(provider: .copilot, keychain: keychain)
-
-        session.purgeLegacy(CopilotService.legacyKeys)
-
-        #expect(keychain.loadString(key: .copilotPAT) == nil)
-        #expect(keychain.loadString(key: .copilotUsername) == nil)
-    }
-
     private func makeSession(
         provider: Provider = .cursor,
         keychain: any KeychainStoring = InMemoryKeychainStore(),

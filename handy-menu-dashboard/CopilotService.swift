@@ -40,7 +40,6 @@ final class CopilotService: UsageDisplaying {
 
     static let entitlementURL = URL(string: "https://github.com/github-copilot/chat/entitlement")!
     static let noQuotaMessage = "No Copilot credit quota is available for this account."
-    static let legacyKeys: [KeychainKey] = [.copilotUsername, .copilotPAT, .copilotEntitlement]
 
     var reading: UsageReading {
         UsageReading(
@@ -81,7 +80,6 @@ final class CopilotService: UsageDisplaying {
     ) {
         session = UsageSession(provider: .copilot, keychain: keychain, preferences: preferences)
         transport = UsageTransport(dataLoader: dataLoader, policy: .github)
-        session.purgeLegacy(Self.legacyKeys)
         session.loadStoredCredential()
         if autoRefresh {
             startAutoRefresh()
@@ -90,11 +88,16 @@ final class CopilotService: UsageDisplaying {
 
     var credentialHeader: String? { session.cookieHeader }
 
-    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
-        await authenticate(with: cookies)
+    func adoptBrowserCookies(_ cookies: [HTTPCookie], ifAllowed: @escaping @MainActor () -> Bool = { true }) async -> LoginOutcome {
+        await authenticate(with: cookies, ifAllowed: ifAllowed)
     }
 
     func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
+        await authenticate(with: cookies, ifAllowed: { true })
+    }
+
+    private func authenticate(with cookies: [HTTPCookie], ifAllowed: @MainActor () -> Bool) async -> LoginOutcome {
+        guard ifAllowed() else { return .failure("Session update cancelled") }
         let githubCookies = cookies.filter { cookie in
             cookie.domain == "github.com" || cookie.domain.hasSuffix(".github.com")
         }
@@ -115,10 +118,12 @@ final class CopilotService: UsageDisplaying {
         do {
             let entitlement = try await fetchEntitlement(cookieHeader: header)
             let snapshot = try makeSnapshot(from: entitlement)
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             session.persist(header)
             apply(snapshot)
             return .authenticated
         } catch let kind as UsageFailure.Kind {
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             session.absorb(kind)
             switch kind {
             case .authExpired:
@@ -127,6 +132,7 @@ final class CopilotService: UsageDisplaying {
                 return .failure(error ?? "Unable to sign in to GitHub")
             }
         } catch {
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             let message = "Invalid response from GitHub"
             self.error = message
             return .failure(message)
@@ -135,7 +141,6 @@ final class CopilotService: UsageDisplaying {
 
     func clearCredentials() async {
         session.discardCredential()
-        session.purgeLegacy(Self.legacyKeys)
         creditsUsed = 0
         creditsTotal = 0
         creditsRemaining = 0

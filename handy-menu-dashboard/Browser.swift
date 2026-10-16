@@ -2,6 +2,8 @@ import Foundation
 
 nonisolated enum Browser: String, CaseIterable, Codable, Identifiable, Sendable {
     case firefox
+    case firefoxDeveloperEdition
+    case firefoxNightly
     case zen
     case chrome
     case brave
@@ -16,6 +18,8 @@ nonisolated enum Browser: String, CaseIterable, Codable, Identifiable, Sendable 
     var displayName: String {
         switch self {
         case .firefox: "Firefox"
+        case .firefoxDeveloperEdition: "Firefox Developer Edition"
+        case .firefoxNightly: "Firefox Nightly"
         case .zen: "Zen"
         case .chrome: "Chrome"
         case .brave: "Brave"
@@ -29,7 +33,9 @@ nonisolated enum Browser: String, CaseIterable, Codable, Identifiable, Sendable 
 
     var bundleIDs: [String] {
         switch self {
-        case .firefox: ["org.mozilla.firefox", "org.mozilla.firefoxdeveloperedition", "org.mozilla.nightly"]
+        case .firefox: ["org.mozilla.firefox"]
+        case .firefoxDeveloperEdition: ["org.mozilla.firefoxdeveloperedition"]
+        case .firefoxNightly: ["org.mozilla.nightly"]
         case .zen: ["app.zen-browser.zen"]
         case .chrome: ["com.google.Chrome", "com.google.Chrome.canary"]
         case .brave: ["com.brave.Browser", "com.brave.Browser.nightly"]
@@ -54,7 +60,7 @@ nonisolated enum Browser: String, CaseIterable, Codable, Identifiable, Sendable 
     func engine(home: URL) -> Engine {
         let appSupport = home.appending(path: "Library/Application Support")
         switch self {
-        case .firefox:
+        case .firefox, .firefoxDeveloperEdition, .firefoxNightly:
             return .gecko(profilesRoot: appSupport.appending(path: "Firefox"))
         case .zen:
             return .gecko(profilesRoot: appSupport.appending(path: "zen"))

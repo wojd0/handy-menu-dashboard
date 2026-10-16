@@ -1,7 +1,9 @@
 import Foundation
 
 nonisolated enum ManualCookieImport {
-    static func command(for browser: Browser, filters: [CookieHarvest.DomainMatch], home: URL) -> String {
+    static func command(
+        for browser: Browser, filters: [CookieHarvest.DomainMatch], home: URL, profile: URL? = nil
+    ) -> String {
         switch browser.engine(home: home) {
         case let .gecko(profilesRoot):
             let root = shellPath(profilesRoot, home: home)
@@ -10,8 +12,10 @@ nonisolated enum ManualCookieImport {
                 column: "host",
                 freshness: GeckoCookieStore.freshness
             )
+            let database = profile.map { "DB=" + shellQuote($0.appending(path: "cookies.sqlite").path) }
+                ?? "DB=$(find \(root) -maxdepth 3 -name cookies.sqlite -exec ls -t {} + | head -1)"
             return [
-                "DB=$(find \(root) -maxdepth 3 -name cookies.sqlite -exec ls -t {} + | head -1)",
+                database,
                 "{ [ -n \"$DB\" ] || { echo 'No cookies.sqlite found. If you see Operation not permitted, " +
                     "give Terminal Full Disk Access.'; false; }; }",
                 "cp \"$DB\" \"$TMPDIR/hmd-gecko.sqlite\"",
@@ -28,11 +32,15 @@ nonisolated enum ManualCookieImport {
                 column: "host_key",
                 freshness: ChromiumCookieStore.freshness
             )
-            return [
+            let database = profile.map { "DB=" + shellQuote($0.appending(path: "Cookies").path) } ?? [
                 "DIR=\(root)",
                 "P=$(/usr/bin/python3 -c \"import json;print(json.load(open('$DIR/Local State'))" +
                     "['profile']['last_used'])\" 2>/dev/null || echo Default)",
-                "cp \"$DIR/$P/Cookies\" \"$TMPDIR/hmd-chromium.sqlite\"",
+                "DB=\"$DIR/$P/Cookies\""
+            ].joined(separator: " && ")
+            return [
+                database,
+                "cp \"$DB\" \"$TMPDIR/hmd-chromium.sqlite\"",
                 "{ printf 'K\\t%s\\n' \"$(security find-generic-password -w -s '\(service)' -a '\(account)')\"",
                 "printf 'V\\t%s\\n' \"$(sqlite3 \"$TMPDIR/hmd-chromium.sqlite\" " +
                     "\"SELECT value FROM meta WHERE key='version'\")\"",
@@ -112,6 +120,10 @@ nonisolated enum ManualCookieImport {
             }
             return BrowserCookie(domain: row.host, name: row.name, value: value, path: row.path)
         }
+    }
+
+    private static func shellQuote(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
     }
 
     private static func shellPath(_ url: URL, home: URL) -> String {

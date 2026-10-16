@@ -18,6 +18,13 @@ struct ManualCookieImportTests {
         #expect(command.contains("| pbcopy"))
     }
 
+    @Test func geckoCommandUsesSelectedProfileAndQuotesShellCharacters() {
+        let profile = URL(fileURLWithPath: "/external/Work's $(touch unwanted)")
+        let command = ManualCookieImport.command(for: .firefox, filters: [], home: home, profile: profile)
+        #expect(command.hasPrefix("DB='/external/Work'\"'\"'s $(touch unwanted)/cookies.sqlite' &&"))
+        #expect(!command.contains("ls -t"))
+    }
+
     @Test func chromiumCommandReadsTheSafeStoragePassword() {
         let command = ManualCookieImport.command(
             for: .chrome,
@@ -29,6 +36,14 @@ struct ManualCookieImportTests {
         #expect(command.contains("Chrome Safe Storage"))
         #expect(command.contains("hex(encrypted_value)"))
         #expect(command.contains("| pbcopy"))
+    }
+
+    @Test func chromiumCommandUsesSelectedProfileAndQuotesShellCharacters() {
+        let profile = URL(fileURLWithPath: "/external/Work's $(touch unwanted)")
+        let command = ManualCookieImport.command(for: .chrome, filters: [], home: home, profile: profile)
+        #expect(command.hasPrefix("DB='/external/Work'\"'\"'s $(touch unwanted)/Cookies' &&"))
+        #expect(command.contains("cp \"$DB\""))
+        #expect(!command.contains("last_used"))
     }
 
     @Test func safariCommandBase64EncodesTheCookieFile() {

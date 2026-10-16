@@ -17,34 +17,56 @@ struct SettingsView: View {
     @State private var dropIndicator: DropIndicator?
     @State private var cardHeights: [Provider: CGFloat] = [:]
     @State private var signingOutProvider: Provider?
+    @State private var autoRenewProvider: Provider?
 
     var body: some View {
-        VStack(spacing: 16) {
-            ForEach(Provider.ordered(from: providerOrderRaw)) { provider in
-                section(for: provider)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[provider] = $0 }
-                    .overlay(alignment: .top) { insertionLine(for: provider, after: false).offset(y: -10) }
-                    .overlay(alignment: .bottom) { insertionLine(for: provider, after: true).offset(y: 10) }
-                    .opacity(draggedProvider == provider ? 0.4 : 1)
-                    .onDrop(
-                        of: [.text],
-                        delegate: ProviderDropDelegate(
-                            provider: provider,
-                            height: cardHeights[provider] ?? 0,
-                            draggedProvider: $draggedProvider,
-                            dropIndicator: $dropIndicator,
-                            onReorder: reorder
+        ScrollView {
+            VStack(spacing: 16) {
+                ForEach(Provider.ordered(from: providerOrderRaw)) { provider in
+                    section(for: provider)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[provider] = $0 }
+                        .overlay(alignment: .top) { insertionLine(for: provider, after: false).offset(y: -10) }
+                        .overlay(alignment: .bottom) { insertionLine(for: provider, after: true).offset(y: 10) }
+                        .opacity(draggedProvider == provider ? 0.4 : 1)
+                        .onDrop(
+                            of: [.text],
+                            delegate: ProviderDropDelegate(
+                                provider: provider,
+                                height: cardHeights[provider] ?? 0,
+                                draggedProvider: $draggedProvider,
+                                dropIndicator: $dropIndicator,
+                                onReorder: reorder
+                            )
                         )
-                    )
-            }
+                }
 
-            generalSection
+                if !services.sessionUpdates.pending.isEmpty {
+                    Button("Sign in all…") {
+                        ConsentWindowController.shared.show(
+                            services: services,
+                            providers: services.sessionUpdates.pending
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil || services.sessionUpdates.isHarvesting)
+                    .help("Sign in all enabled, logged-out agents using browser cookies")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                generalSection
+            }
+            .padding(20)
         }
         .animation(.snappy, value: providerOrderRaw)
-        .padding(20)
         .frame(width: 460)
+        .frame(minHeight: 400, idealHeight: 780, maxHeight: 900)
         .sheet(item: $loginProvider) { provider in
             ProviderLoginSheet(provider: provider, services: services)
+        }
+        .sheet(item: $autoRenewProvider) { provider in
+            AutoRenewApprovalDialog(coordinator: services.sessionUpdates, providers: [provider]) { profile in
+                services.sessionUpdates.enableAutoRenew([provider], profile: profile)
+            }
         }
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -80,6 +102,8 @@ struct SettingsView: View {
 
             browserCookiesRow
 
+            automaticUpdatesCheckbox
+
             HStack {
                 if menuBarInserted {
                     Label("In menu bar", systemImage: "checkmark.circle.fill")
@@ -108,8 +132,31 @@ struct SettingsView: View {
             Spacer()
             BrowserSourcePicker(title: "", source: $coordinator.source)
                 .labelsHidden()
-            .fixedSize()
+                .fixedSize()
+                .disabled(coordinator.isHarvesting)
         }
+    }
+
+    private var automaticUpdatesCheckbox: some View {
+        @Bindable var coordinator = services.sessionUpdates
+
+        return Toggle("Auto Update from Browser Cookies", isOn: $coordinator.automaticallyUpdates)
+            .toggleStyle(.checkbox)
+            .disabled(!coordinator.hasAutoRenewApprovals)
+            .help("Pause or resume automatic updates for agents with Auto-Renew approval")
+    }
+
+    private func autoRenewBinding(for provider: Provider) -> Binding<Bool> {
+        Binding(
+            get: { services.sessionUpdates.autoRenewProviders.contains(provider) },
+            set: { enabled in
+                if enabled {
+                    autoRenewProvider = provider
+                } else {
+                    services.sessionUpdates.disableAutoRenew(provider)
+                }
+            }
+        )
     }
 
     @ViewBuilder
@@ -142,6 +189,7 @@ struct SettingsView: View {
         ProviderSettingsCard(
             service: service,
             draggedProvider: $draggedProvider,
+            autoRenew: autoRenewBinding(for: service.provider),
             signingOutProvider: signingOutProvider,
             isPending: isPending(service.provider),
             browserName: browserName,
@@ -159,6 +207,7 @@ struct SettingsView: View {
         return ProviderSettingsCard(
             service: claude,
             draggedProvider: $draggedProvider,
+            autoRenew: autoRenewBinding(for: claude.provider),
             signingOutProvider: signingOutProvider,
             isPending: isPending(claude.provider),
             browserName: browserName,
@@ -167,11 +216,10 @@ struct SettingsView: View {
             onUpdateFromBrowser: { updateFromBrowser(.claude) },
             extra: {
                 if baselines.count > 1 {
-                    HStack {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Baseline")
                             .font(.callout)
-                        Spacer()
-                        Picker("", selection: Binding(
+                        Picker("Baseline", selection: Binding(
                             get: { claude.resolvedBaseline },
                             set: { claude.baseline = $0 }
                         )) {
@@ -181,7 +229,7 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
-                        .fixedSize()
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -211,10 +259,11 @@ struct SettingsView: View {
     private func signOut(_ provider: Provider) {
         guard signingOutProvider == nil else { return }
         signingOutProvider = provider
+        services[provider].isEnabled = false
+        services.sessionUpdates.refreshPending()
 
         Task {
             await services[provider].clearCredentials()
-            services[provider].isEnabled = false
             services.sessionUpdates.refreshPending()
             signingOutProvider = nil
         }

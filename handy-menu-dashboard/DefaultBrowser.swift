@@ -12,10 +12,12 @@ enum DefaultBrowser {
     }
 
     static func installed() -> [Browser] {
-        Browser.allCases.filter { browser in
-            browser.bundleIDs.contains { bundleID in
-                NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil
-            }
-        }
+        Browser.allCases.filter { applicationURL(for: $0) != nil }
+    }
+
+    static func applicationURL(for browser: Browser) -> URL? {
+        browser.bundleIDs.lazy.compactMap {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
+        }.first
     }
 }

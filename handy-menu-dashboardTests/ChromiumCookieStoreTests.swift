@@ -4,6 +4,64 @@ import Testing
 
 @Suite("Chromium cookie store")
 struct ChromiumCookieStoreTests {
+    @Test func listsNamedProfilesWithLastUsedFirstAndSkipsStaleEntries() throws {
+        let root = SQLiteTestDatabase.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        for folder in ["Default", "Profile 1", "Profile 2", "System Profile", "Guest Profile"] {
+            try FileManager.default.createDirectory(at: root.appending(path: folder), withIntermediateDirectories: true)
+        }
+        let state = """
+        {"profile":{"last_used":"Profile 1","info_cache":{
+          "Default":{"name":"Personal"},"Profile 1":{"name":"Work"},
+          "Profile 2":{"name":"Personal"},"Profile 99":{"name":"Deleted"}
+        }}}
+        """
+        try state.write(to: root.appending(path: "Local State"), atomically: true, encoding: .utf8)
+
+        let profiles = try ChromiumCookieStore.profiles(at: root)
+        #expect(profiles.map(\.name) == ["Work", "Personal", "Personal"])
+        #expect(profiles.map { $0.directory.lastPathComponent } == ["Profile 1", "Default", "Profile 2"])
+    }
+
+    @Test(arguments: [nil, "not json"] as [String?])
+    func fallsBackToProfileFoldersWithoutReadableMetadata(_ state: String?) throws {
+        let root = SQLiteTestDatabase.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        for folder in ["Default", "Profile 2", "Profile 10", "Crashpad"] {
+            try FileManager.default.createDirectory(at: root.appending(path: folder), withIntermediateDirectories: true)
+        }
+        try state?.write(to: root.appending(path: "Local State"), atomically: true, encoding: .utf8)
+        try Data().write(to: root.appending(path: "Profile 3"))
+
+        let profiles = try ChromiumCookieStore.profiles(at: root)
+        #expect(profiles.map(\.name) == ["Default", "Profile 2", "Profile 10"])
+    }
+
+    @Test func readsOnlyTheSelectedProfileEvenWhenAnotherWasLastUsed() throws {
+        let root = setupUserData(lastUsed: "Default")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let selected = root.appending(path: "Profile 1")
+        try FileManager.default.createDirectory(at: selected, withIntermediateDirectories: true)
+        SQLiteTestDatabase.create(at: selected.appending(path: "Cookies"), statements: [
+            "CREATE TABLE meta (key TEXT, value TEXT)",
+            "CREATE TABLE cookies (host_key TEXT, name TEXT, value TEXT, path TEXT, encrypted_value BLOB, expires_utc INTEGER)",
+            "INSERT INTO cookies VALUES ('github.com', 'user_session', 'work', '/', x'', 0)"
+        ])
+
+        let store = ChromiumCookieStore(
+            userDataRoot: root, safeStorageService: "unused", safeStorageAccount: "unused",
+            safeStoragePassword: { "peanuts" }
+        )
+        let cookies = try store.cookies(matching: [.exactOrSuffix("github.com")], profile: selected)
+        #expect(cookies.map(\.value) == ["work"])
+    }
+
+    @Test func emptyProfileListThrows() throws {
+        let root = SQLiteTestDatabase.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        #expect(throws: BrowserCookieError.noProfile) { try ChromiumCookieStore.profiles(at: root) }
+    }
+
     @Test func readsPlaintextCookiesFromTheLastUsedProfile() throws {
         let root = setupUserData(lastUsed: "Profile 1")
 

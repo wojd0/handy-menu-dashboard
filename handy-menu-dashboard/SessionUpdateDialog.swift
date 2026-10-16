@@ -9,10 +9,14 @@ struct SessionUpdateDialog: View {
     var onClose: () -> Void = {}
 
     @State private var isWorking = false
+    @State private var selectedProfile: URL?
     @State private var manualText = ""
     @State private var manualError: String?
+    @State private var browserError: String?
+    @State private var showsAutoRenewApproval = false
+    @State private var autoRenewTargets: [Provider] = []
 
-    private var home: URL { URL(fileURLWithPath: NSHomeDirectory()) }
+    private var home: URL { BrowserHome.current }
 
     private var targets: [Provider] { providers ?? coordinator.pending }
 
@@ -29,6 +33,24 @@ struct SessionUpdateDialog: View {
         }
         .padding(18)
         .frame(width: width)
+        .sheet(isPresented: $showsAutoRenewApproval) {
+            AutoRenewApprovalDialog(
+                coordinator: coordinator,
+                providers: autoRenewTargets,
+                initialProfile: selectedProfile
+            ) { profile in
+                selectedProfile = profile
+                showsAutoRenewApproval = false
+                approve(autoRenewTargets, autoRenew: true)
+            }
+        }
+        .onChange(of: coordinator.phase) { _, phase in
+            guard case .finished(let results) = phase,
+                  !results.isEmpty,
+                  results.values.allSatisfy({ $0 == .updated }) else { return }
+            coordinator.skip()
+            onClose()
+        }
     }
 
     private var header: some View {
@@ -49,24 +71,31 @@ struct SessionUpdateDialog: View {
                     Image(systemName: provider.iconName)
                     Text(provider.displayName)
                         .font(.callout)
-                    Spacer()
-                    Text(coordinator.reason(for: provider))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
 
             Divider()
 
             BrowserSourcePicker(title: "Browser", source: $coordinator.source)
+                .disabled(isWorking)
 
-            Text(explanation)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if let browser = coordinator.resolvedBrowser, let root = browser.engine(home: home).profileRoot {
+                BrowserProfilePicker(browser: browser, root: root, selection: $selectedProfile)
+                    .id(browser)
+                    .disabled(isWorking)
+            }
+
+            cookieAccessDetails
+
+            Button("Approve and Auto-Renew…") {
+                autoRenewTargets = targets
+                showsAutoRenewApproval = true
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isWorking || coordinator.isHarvesting || targets.isEmpty || needsProfile)
 
             HStack {
-                Button("Skip") {
+                Button("Cancel") {
                     coordinator.skip()
                     onClose()
                 }
@@ -78,7 +107,7 @@ struct SessionUpdateDialog: View {
                     approve(targets)
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(isWorking || targets.isEmpty)
+                .disabled(isWorking || coordinator.isHarvesting || targets.isEmpty || needsProfile)
             }
         }
     }
@@ -93,9 +122,21 @@ struct SessionUpdateDialog: View {
                 manualSection(results)
             }
 
+            if results.values.contains(where: { $0 != .updated }) {
+                Text("After signing in using your browser, return here and choose Try Again to import fresh cookies. Use the same browser profile selected for import.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let browserError {
+                Text(browserError).font(.caption).foregroundStyle(.red)
+            }
+
             HStack {
+                Button("Try Again") { coordinator.skip() }
                 Spacer()
-                Button("Done") {
+                Button("Close") {
                     coordinator.skip()
                     onClose()
                 }
@@ -110,26 +151,65 @@ struct SessionUpdateDialog: View {
 
     @ViewBuilder
     private func resultRow(_ provider: Provider, result: SessionUpdateCoordinator.HarvestResult?) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: provider.iconName)
-            Text(provider.displayName)
-                .font(.callout)
-            Spacer()
-            switch result {
-            case .updated:
-                Label("Updated", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .labelStyle(.iconOnly)
-                Text("Updated").font(.caption).foregroundStyle(.secondary)
-            case .notSignedInBrowser, .rejected:
-                Button("Sign in via browser…") { onWebViewFallback(provider) }
-                    .font(.caption)
-            case .accessDenied, .keyDenied:
-                Text("Access blocked").font(.caption).foregroundStyle(.orange)
-            case .failed(let message):
-                Text(message).font(.caption).foregroundStyle(.red)
-            case .none:
-                EmptyView()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: provider.iconName)
+                Text(provider.displayName)
+                    .font(.callout)
+                Spacer()
+                switch result {
+                case .updated:
+                    Label("Updated", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .labelStyle(.iconOnly)
+                    Text("Updated").font(.caption).foregroundStyle(.secondary)
+                case .notSignedInBrowser:
+                    Text("Not signed in").font(.caption).foregroundStyle(.orange)
+                case .rejected(let message), .failed(let message):
+                    Text(message).font(.caption).foregroundStyle(.red)
+                case .accessDenied, .keyDenied:
+                    Text("Access blocked").font(.caption).foregroundStyle(.orange)
+                case .none:
+                    EmptyView()
+                }
+            }
+
+            if let result, result != .updated {
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        signInOptions(provider)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        signInOptions(provider)
+                    }
+                }
+                .font(.caption)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func signInOptions(_ provider: Provider) -> some View {
+        Button("Sign in in the app…") { onWebViewFallback(provider) }
+        Button("Sign in using your browser…") { signInUsingBrowser(provider) }
+    }
+
+    private func signInUsingBrowser(_ provider: Provider) {
+        browserError = nil
+        guard let browser = coordinator.resolvedBrowser,
+              let applicationURL = DefaultBrowser.applicationURL(for: browser) else {
+            browserError = "Could not open the selected browser. Choose Try Again to select another browser."
+            return
+        }
+        Task {
+            do {
+                _ = try await NSWorkspace.shared.open(
+                    [provider.harvest.startURL],
+                    withApplicationAt: applicationURL,
+                    configuration: NSWorkspace.OpenConfiguration()
+                )
+            } catch {
+                browserError = "Could not open \(browser.displayName). Open it manually to sign in, then choose Try Again."
             }
         }
     }
@@ -146,7 +226,8 @@ struct SessionUpdateDialog: View {
                 let command = ManualCookieImport.command(
                     for: browser,
                     filters: targets.map { $0.harvest.domainMatch },
-                    home: home
+                    home: home,
+                    profile: selectedProfile
                 )
                 Text(command)
                     .font(.system(.caption2, design: .monospaced))
@@ -174,19 +255,59 @@ struct SessionUpdateDialog: View {
         }
     }
 
-    private var explanation: String {
-        let hosts = targets
-            .flatMap { $0.harvest.websiteDataDomains }
+    private var cookieDomains: [String] {
+        targets
+            .map { provider in
+                switch provider.harvest.domainMatch {
+                case .exactOrSuffix(let domain), .contains(let domain): domain
+                }
+            }
             .reduced()
-            .joined(separator: ", ")
-        let browserName = coordinator.resolvedBrowser?.displayName ?? "your browser"
-        var text = "Handy Menu Dashboard will read cookies for \(hosts) from \(browserName)'s cookie store on this Mac. "
-            + "Only session cookies are kept, saved to your Keychain. Nothing leaves your Mac except the usual usage requests."
-        if let browser = coordinator.resolvedBrowser, isChromium(browser) {
-            text += " macOS may ask to allow access to '\(browser.displayName) Safe Storage'."
-        }
-        return text
     }
+
+    private var cookieAccessDetails: some View {
+        let browserName = coordinator.resolvedBrowser?.displayName ?? "your browser"
+
+        return VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Cookie sources")
+                    .fontWeight(.semibold)
+                Text("Handy Menu Dashboard will read cookies from \(browserName) on this Mac for:")
+                    .foregroundStyle(.secondary)
+
+                ForEach(cookieDomains, id: \.self) { domain in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("•")
+                            .foregroundStyle(.secondary)
+                        Text(domain)
+                            .font(.system(.caption, design: .monospaced))
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("How your cookies are used")
+                    .fontWeight(.semibold)
+                Text("Cookies are saved in your Keychain on this Mac and used only to authenticate with each provider and fetch your usage.")
+                    .foregroundStyle(.secondary)
+                Text("They do not leave this device except for these requests to the relevant provider.")
+            }
+
+            if let browser = coordinator.resolvedBrowser, isChromium(browser) {
+                Text("macOS may ask to allow access to '\(browser.displayName) Safe Storage'.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var supportsProfiles: Bool {
+        coordinator.resolvedBrowser?.engine(home: home).profileRoot != nil
+    }
+
+    private var needsProfile: Bool { supportsProfiles && selectedProfile == nil }
 
     private func isChromium(_ browser: Browser) -> Bool {
         if case .chromium = browser.engine(home: home) { return true }
@@ -197,10 +318,15 @@ struct SessionUpdateDialog: View {
         results.values.contains { $0 == .accessDenied || $0 == .keyDenied }
     }
 
-    private func approve(_ providers: [Provider]) {
+    private func approve(_ providers: [Provider], autoRenew: Bool = false) {
         isWorking = true
         Task {
-            await coordinator.approve(providers)
+            let profile = supportsProfiles ? selectedProfile : nil
+            if autoRenew {
+                await coordinator.approveAndAutoRenew(providers, profile: profile)
+            } else {
+                await coordinator.approve(providers, profile: profile)
+            }
             isWorking = false
         }
     }

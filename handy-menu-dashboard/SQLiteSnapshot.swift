@@ -7,8 +7,13 @@ nonisolated struct SQLiteSnapshot {
 
     init(of source: URL) throws(BrowserCookieError) {
         let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: source.path) else {
-            throw .noProfile
+        do {
+            _ = try fileManager.attributesOfItem(atPath: source.path)
+        } catch {
+            let error = error as NSError
+            if error.code == NSFileReadNoPermissionError { throw .accessDenied }
+            if error.code == NSFileReadNoSuchFileError { throw .noProfile }
+            throw .unreadable
         }
 
         let directory = fileManager.temporaryDirectory

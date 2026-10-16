@@ -234,6 +234,33 @@ extension ChatGPTUsageTests {
         #expect(keychain.loadString(key: .chatGPTCookies) == nil)
     }
 
+    @Test func browserImportDoesNotPersistAfterApprovalIsRevokedDuringValidation() async {
+        let keychain = InMemoryKeychainStore()
+        let token = makeJWT(accountID: accountID)
+        var approved = true
+        let service = ChatGPTService(
+            keychain: keychain,
+            dataLoader: { request in
+                if request.url?.path == "/api/auth/session" {
+                    return try response(for: request, json: ["accessToken": token])
+                }
+                approved = false
+                return try response(for: request, json: [
+                    "effective_monthly_limit": ["limit": 40_000], "current_month_usage": 12.5
+                ])
+            },
+            autoRefresh: false,
+            preferences: InMemoryPreferenceStore()
+        )
+
+        let result = await service.adoptBrowserCookies(makeCookies(), ifAllowed: { approved })
+
+        #expect(result == .failure("Session update cancelled"))
+        #expect(!service.isAuthenticated)
+        #expect(!service.isEnabled)
+        #expect(keychain.loadString(key: .chatGPTCookies) == nil)
+    }
+
     @Test func refreshLoadsSessionThenMonthlyUsage() async throws {
         let keychain = InMemoryKeychainStore()
         keychain.saveString(

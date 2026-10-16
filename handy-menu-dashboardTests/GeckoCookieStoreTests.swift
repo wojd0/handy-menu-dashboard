@@ -53,6 +53,43 @@ struct GeckoCookieStoreTests {
         #expect(thrown == .accessDenied)
     }
 
+    @Test func listsNamedProfilesWithInstallDefaultFirst() throws {
+        let root = SQLiteTestDatabase.makeDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let ini = """
+        [Profile0]
+        Name=Personal
+        IsRelative=1
+        Path=Profiles/personal
+        [Profile1]
+        Name=Work
+        IsRelative=0
+        Path=/external/work
+        [Install123]
+        Default=/external/work
+        """
+        try ini.write(to: root.appending(path: "profiles.ini"), atomically: true, encoding: .utf8)
+        let profiles = try GeckoCookieStore(profilesRoot: root).profiles()
+        #expect(profiles.map(\.name) == ["Work", "Personal"])
+        #expect(profiles[0].directory.path == "/external/work")
+        #expect(profiles[1].directory == root.appending(path: "Profiles/personal"))
+    }
+
+    @Test func readsOnlyTheExplicitlySelectedProfile() throws {
+        let root = setupProfile()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let selected = root.appending(path: "Profiles/work")
+        try FileManager.default.createDirectory(at: selected, withIntermediateDirectories: true)
+        SQLiteTestDatabase.create(at: selected.appending(path: "cookies.sqlite"), statements: [
+            "CREATE TABLE moz_cookies (host TEXT, name TEXT, value TEXT, path TEXT, expiry INTEGER)",
+            "INSERT INTO moz_cookies VALUES ('.claude.ai', 'sessionKey', 'work', '/', 4102444800)"
+        ])
+        let cookies = try GeckoCookieStore(profilesRoot: root).cookies(
+            matching: [.contains("claude.ai")], profile: selected
+        )
+        #expect(cookies.map(\.value) == ["work"])
+    }
+
     private func setupProfile() -> URL {
         let root = SQLiteTestDatabase.makeDirectory()
         let profileDir = root.appending(path: "Profiles/abc.default")

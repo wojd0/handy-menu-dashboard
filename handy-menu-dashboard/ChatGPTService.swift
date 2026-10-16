@@ -84,11 +84,16 @@ final class ChatGPTService: UsageDisplaying {
 
     var credentialHeader: String? { session.cookieHeader }
 
-    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
-        await authenticate(with: cookies)
+    func adoptBrowserCookies(_ cookies: [HTTPCookie], ifAllowed: @escaping @MainActor () -> Bool = { true }) async -> LoginOutcome {
+        await authenticate(with: cookies, ifAllowed: ifAllowed)
     }
 
     func authenticate(with cookies: [HTTPCookie]) async -> LoginOutcome {
+        await authenticate(with: cookies, ifAllowed: { true })
+    }
+
+    private func authenticate(with cookies: [HTTPCookie], ifAllowed: @MainActor () -> Bool) async -> LoginOutcome {
+        guard ifAllowed() else { return .failure("Session update cancelled") }
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty, CookieHeader.value(named: "_account", in: header) != nil else {
             let message = "Invalid response from ChatGPT"
@@ -102,10 +107,12 @@ final class ChatGPTService: UsageDisplaying {
 
         do {
             let usage = try await loadUsage(cookieHeader: header)
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             session.persist(header)
             applyUsage(usage)
             return .authenticated
         } catch let kind as UsageFailure.Kind {
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             session.absorb(kind)
             switch kind {
             case .authExpired:
@@ -114,6 +121,7 @@ final class ChatGPTService: UsageDisplaying {
                 return .failure(error ?? "Unable to sign in to ChatGPT")
             }
         } catch {
+            guard ifAllowed() else { return .failure("Session update cancelled") }
             let message = "Invalid response from ChatGPT"
             self.error = message
             return .failure(message)

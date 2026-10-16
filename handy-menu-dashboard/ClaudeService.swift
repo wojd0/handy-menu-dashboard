@@ -174,9 +174,10 @@ final class ClaudeService: UsageDisplaying {
         Task { await refresh() }
     }
 
-    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
+    func adoptBrowserCookies(_ cookies: [HTTPCookie], ifAllowed: @escaping @MainActor () -> Bool = { true }) async -> LoginOutcome {
         let header = CookieHeader.header(from: cookies)
         guard !header.isEmpty else { return .failure("No Claude cookies found") }
+        guard ifAllowed() else { return .failure("Session update cancelled") }
 
         session.persist(header)
         await refresh()

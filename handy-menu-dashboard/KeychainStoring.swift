@@ -3,9 +3,6 @@ import Foundation
 enum KeychainKey: String {
     case cursorCookies = "com.wojd0.dashboard.cursorCookies"
     case copilotCookies = "com.wojd0.dashboard.copilotCookies"
-    case copilotPAT = "com.wojd0.dashboard.copilotPAT"
-    case copilotUsername = "com.wojd0.dashboard.copilotUsername"
-    case copilotEntitlement = "com.wojd0.dashboard.copilotEntitlement"
     case claudeCookies = "com.wojd0.dashboard.claudeCookies"
     case chatGPTCookies = "com.wojd0.dashboard.chatGPTCookies"
 }

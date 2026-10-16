@@ -82,7 +82,8 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   which the `App` wires to `ConsentWindowController`. The panel hosts `SessionUpdateDialog` and shows
   `ProviderLoginSheet` for the web-view fallback; Settings opens it for a single provider.
 - **`KeychainStoring` / `KeychainStore`** — Protocol + production implementation wrapping `SecItem*`. Tests
-  use `InMemoryKeychainStore`. Keys prefixed `com.wojd0.dashboard.*`, with migration from the legacy format.
+  use `InMemoryKeychainStore`. Credentials share the `com.wojd0.dashboard.credentials` entry, cached per
+  store instance. Users upgrading from per-provider storage authenticate again.
 - **`PreferenceStoring`** — Same pattern for `UserDefaults`. Tests use `InMemoryPreferenceStore` so the suite
   neither reads nor writes real user preferences.
 

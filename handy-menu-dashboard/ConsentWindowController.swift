@@ -9,7 +9,7 @@ final class ConsentWindowController {
 
     func show(services: ServiceSet, providers: [Provider]? = nil) {
         let coordinator = services.sessionUpdates
-        guard !(providers ?? coordinator.pending).isEmpty else { return }
+        guard !coordinator.isHarvesting, !(providers ?? coordinator.pending).isEmpty else { return }
         coordinator.skip()
 
         let content = ConsentPanelContent(

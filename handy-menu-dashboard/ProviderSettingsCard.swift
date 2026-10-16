@@ -3,6 +3,7 @@ import SwiftUI
 struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     @Bindable var service: Service
     @Binding var draggedProvider: Provider?
+    @Binding var autoRenew: Bool
     let signingOutProvider: Provider?
     var isPending: Bool = false
     var browserName: String?
@@ -40,6 +41,8 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                         .disabled(isBusy)
                 }
 
+                autoRenewCheckbox
+
                 extra
 
                 HStack {
@@ -59,6 +62,9 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 Text(provider.signInBlurb)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                autoRenewCheckbox
                 HStack {
                     Button(updateButtonTitle, action: onUpdateFromBrowser)
                         .buttonStyle(.borderedProminent)
@@ -75,12 +81,19 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
 
     private var provider: Provider { service.provider }
 
+    private var autoRenewCheckbox: some View {
+        Toggle("Auto-Renew from Browser Cookies", isOn: $autoRenew)
+            .toggleStyle(.checkbox)
+            .font(.callout)
+            .disabled(isBusy)
+    }
+
     private var isBusy: Bool { signingOutProvider != nil }
 
     private var signInButtonTitle: String {
         signingOutProvider == provider
             ? "Clearing browser session..."
-            : "Sign in via browser..."
+            : "Sign in in the app…"
     }
 
     private var updateButtonTitle: String {
@@ -116,6 +129,7 @@ extension ProviderSettingsCard where Extra == EmptyView {
     init(
         service: Service,
         draggedProvider: Binding<Provider?>,
+        autoRenew: Binding<Bool>,
         signingOutProvider: Provider?,
         isPending: Bool = false,
         browserName: String? = nil,
@@ -126,6 +140,7 @@ extension ProviderSettingsCard where Extra == EmptyView {
         self.init(
             service: service,
             draggedProvider: draggedProvider,
+            autoRenew: autoRenew,
             signingOutProvider: signingOutProvider,
             isPending: isPending,
             browserName: browserName,

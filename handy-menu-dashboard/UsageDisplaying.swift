@@ -16,10 +16,14 @@ protocol UsageDisplaying: AnyObject, Observable {
     var credentialHeader: String? { get }
     func refresh() async
     func clearCredentials() async
-    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome
+    func adoptBrowserCookies(_ cookies: [HTTPCookie], ifAllowed: @escaping @MainActor () -> Bool) async -> LoginOutcome
 }
 
 extension UsageDisplaying {
+    func adoptBrowserCookies(_ cookies: [HTTPCookie]) async -> LoginOutcome {
+        await adoptBrowserCookies(cookies, ifAllowed: { true })
+    }
+
     var subtitle: String? { nil }
     var isActive: Bool { isAuthenticated && isEnabled }
 }

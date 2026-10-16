@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Security
 
 nonisolated struct ChromiumCookieStore {
@@ -13,6 +14,7 @@ nonisolated struct ChromiumCookieStore {
         userDataRoot: URL,
         safeStorageService: String,
         safeStorageAccount: String,
+        allowUserInteraction: Bool = true,
         safeStoragePassword: (() throws(BrowserCookieError) -> String)? = nil
     ) {
         self.userDataRoot = userDataRoot
@@ -24,13 +26,21 @@ nonisolated struct ChromiumCookieStore {
             let service = safeStorageService
             let account = safeStorageAccount
             self.safeStoragePassword = { () throws(BrowserCookieError) -> String in
-                try Self.keychainPassword(service: service, account: account)
+                try Self.keychainPassword(service: service, account: account, allowUserInteraction: allowUserInteraction)
             }
         }
     }
 
-    func cookies(matching filters: [CookieHarvest.DomainMatch]) throws(BrowserCookieError) -> [BrowserCookie] {
-        let cookiesFile = try profileDirectory().appending(path: "Cookies")
+    func cookies(
+        matching filters: [CookieHarvest.DomainMatch], profile: URL? = nil
+    ) throws(BrowserCookieError) -> [BrowserCookie] {
+        let directory: URL
+        if let profile {
+            directory = profile
+        } else {
+            directory = try profileDirectory()
+        }
+        let cookiesFile = directory.appending(path: "Cookies")
 
         let snapshot = try SQLiteSnapshot(of: cookiesFile)
         defer { snapshot.close() }
@@ -80,14 +90,56 @@ nonisolated struct ChromiumCookieStore {
         return directory
     }
 
-    private static func keychainPassword(service: String, account: String) throws(BrowserCookieError) -> String {
-        let query: [String: Any] = [
+    static func profiles(at root: URL) throws(BrowserCookieError) -> [BrowserProfile] {
+        let directories: [URL]
+        do {
+            directories = try FileManager.default.contentsOfDirectory(
+                at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
+            ).filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        } catch {
+            let error = error as NSError
+            if error.code == NSFileReadNoPermissionError { throw .accessDenied }
+            if error.code == NSFileReadNoSuchFileError { throw .noProfile }
+            throw .unreadable
+        }
+
+        let data = try? Data(contentsOf: root.appending(path: "Local State"))
+        let state = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let profileInfo = state?["profile"] as? [String: Any]
+        let names = profileInfo?["info_cache"] as? [String: [String: Any]] ?? [:]
+        let lastUsed = profileInfo?["last_used"] as? String ?? "Default"
+        let profiles = directories.compactMap { directory -> BrowserProfile? in
+            let folder = directory.lastPathComponent
+            guard folder == "Default" || folder.hasPrefix("Profile ") || names[folder] != nil else { return nil }
+            let name = names[folder]?["name"] as? String
+            return BrowserProfile(name: name.flatMap { $0.isEmpty ? nil : $0 } ?? folder, directory: directory)
+        }.sorted { lhs, rhs in
+            let lhsWasLastUsed = lhs.directory.lastPathComponent == lastUsed
+            let rhsWasLastUsed = rhs.directory.lastPathComponent == lastUsed
+            if lhsWasLastUsed != rhsWasLastUsed { return lhsWasLastUsed }
+            let comparison = lhs.name.localizedStandardCompare(rhs.name)
+            return comparison == .orderedSame
+                ? lhs.directory.path < rhs.directory.path : comparison == .orderedAscending
+        }
+        guard !profiles.isEmpty else { throw .noProfile }
+        return profiles
+    }
+
+    private static func keychainPassword(
+        service: String, account: String, allowUserInteraction: Bool
+    ) throws(BrowserCookieError) -> String {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
+        if !allowUserInteraction {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)

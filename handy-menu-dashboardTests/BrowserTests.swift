@@ -6,16 +6,19 @@ import Testing
 struct BrowserTests {
     @Test func resolvesKnownBundleIdentifiers() {
         #expect(Browser.resolve(bundleID: "org.mozilla.firefox") == .firefox)
+        #expect(Browser.resolve(bundleID: "org.mozilla.firefoxdeveloperedition") == .firefoxDeveloperEdition)
+        #expect(Browser.resolve(bundleID: "org.mozilla.nightly") == .firefoxNightly)
         #expect(Browser.resolve(bundleID: "com.google.Chrome") == .chrome)
         #expect(Browser.resolve(bundleID: "app.zen-browser.zen") == .zen)
         #expect(Browser.resolve(bundleID: "com.apple.Safari") == .safari)
         #expect(Browser.resolve(bundleID: "com.unknown.Thing") == nil)
     }
 
-    @Test func geckoProfilesRootIsUnderApplicationSupport() {
+    @Test(arguments: [Browser.firefox, .firefoxDeveloperEdition, .firefoxNightly])
+    func geckoProfilesRootIsUnderApplicationSupport(browser: Browser) {
         let home = URL(fileURLWithPath: "/Users/tester")
 
-        let engine = Browser.firefox.engine(home: home)
+        let engine = browser.engine(home: home)
 
         guard case let .gecko(profilesRoot) = engine else {
             Issue.record("expected gecko engine")

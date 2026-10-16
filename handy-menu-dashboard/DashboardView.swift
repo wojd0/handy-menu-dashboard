@@ -4,26 +4,14 @@ struct DashboardView: View {
     let services: ServiceSet
     @Environment(\.openWindow) private var openWindow
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
-    @State private var dialogDismissed = false
 
     var body: some View {
         let activeProviders = Provider.ordered(from: providerOrderRaw).filter(isActive)
-        let pending = services.sessionUpdates.pending
 
         VStack(alignment: .leading, spacing: 16) {
-            if !pending.isEmpty && !dialogDismissed {
-                SessionUpdateDialog(
-                    coordinator: services.sessionUpdates,
-                    width: 240,
-                    onWebViewFallback: { _ in openSettings() },
-                    onClose: { dialogDismissed = true }
-                )
-                Divider()
-            }
-
             if activeProviders.isEmpty {
                 VStack(spacing: 8) {
-                    Text("No services configured")
+                    Text("No usage to display")
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     Text("Open Settings to connect your accounts")
@@ -38,22 +26,6 @@ struct DashboardView: View {
                         Divider()
                     }
                     card(for: provider)
-                }
-            }
-
-            let pendingRows = pending.filter { !activeProviders.contains($0) }
-            if dialogDismissed {
-                ForEach(pendingRows) { provider in
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.yellow)
-                        Text(provider.displayName)
-                            .font(.callout)
-                        Spacer()
-                        Text("Needs update")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
             }
 
@@ -98,10 +70,6 @@ struct DashboardView: View {
         .frame(width: 280)
         .task {
             await services.refreshAll()
-        }
-        .onAppear {
-            dialogDismissed = false
-            services.sessionUpdates.skip()
         }
     }
 
