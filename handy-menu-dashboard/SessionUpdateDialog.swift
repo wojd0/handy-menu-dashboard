@@ -123,7 +123,8 @@ struct SessionUpdateDialog: View {
             }
 
             if results.values.contains(where: { $0 != .updated }) {
-                Text("After signing in using your browser, return here and choose Try Again to import fresh cookies. Use the same browser profile selected for import.")
+                Text("After signing in using \(browserName), return here and choose Try Again to import fresh cookies. "
+                    + "Use the same browser profile selected for import.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -190,8 +191,8 @@ struct SessionUpdateDialog: View {
 
     @ViewBuilder
     private func signInOptions(_ provider: Provider) -> some View {
-        Button("Sign in in the app…") { onWebViewFallback(provider) }
-        Button("Sign in using your browser…") { signInUsingBrowser(provider) }
+        Button("Sign in here…") { onWebViewFallback(provider) }
+        Button("Sign in using \(browserName)…") { signInUsingBrowser(provider) }
     }
 
     private func signInUsingBrowser(_ provider: Provider) {
@@ -265,10 +266,12 @@ struct SessionUpdateDialog: View {
             .reduced()
     }
 
-    private var cookieAccessDetails: some View {
-        let browserName = coordinator.resolvedBrowser?.displayName ?? "your browser"
+    private var browserName: String {
+        coordinator.resolvedBrowser.map { "your \($0.displayName)" } ?? "your browser"
+    }
 
-        return VStack(alignment: .leading, spacing: 10) {
+    private var cookieAccessDetails: some View {
+        VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Cookie sources")
                     .fontWeight(.semibold)
@@ -289,7 +292,8 @@ struct SessionUpdateDialog: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("How your cookies are used")
                     .fontWeight(.semibold)
-                Text("Cookies are saved in your Keychain on this Mac and used only to authenticate with each provider and fetch your usage.")
+                Text("Cookies are saved in your Keychain on this Mac "
+                    + "and used only to authenticate with each provider and fetch your usage.")
                     .foregroundStyle(.secondary)
                 Text("They do not leave this device except for these requests to the relevant provider.")
             }
@@ -309,16 +313,19 @@ struct SessionUpdateDialog: View {
 
     private var needsProfile: Bool { supportsProfiles && selectedProfile == nil }
 
-    private func isChromium(_ browser: Browser) -> Bool {
+}
+
+private extension SessionUpdateDialog {
+    func isChromium(_ browser: Browser) -> Bool {
         if case .chromium = browser.engine(home: home) { return true }
         return false
     }
 
-    private func needsManual(_ results: [Provider: SessionUpdateCoordinator.HarvestResult]) -> Bool {
+    func needsManual(_ results: [Provider: SessionUpdateCoordinator.HarvestResult]) -> Bool {
         results.values.contains { $0 == .accessDenied || $0 == .keyDenied }
     }
 
-    private func approve(_ providers: [Provider], autoRenew: Bool = false) {
+    func approve(_ providers: [Provider], autoRenew: Bool = false) {
         isWorking = true
         Task {
             let profile = supportsProfiles ? selectedProfile : nil
@@ -331,7 +338,7 @@ struct SessionUpdateDialog: View {
         }
     }
 
-    private func importFromClipboard(_ browser: Browser) {
+    func importFromClipboard(_ browser: Browser) {
         manualError = nil
         guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else {
             manualError = "Clipboard is empty. Run the command first."
@@ -350,7 +357,7 @@ struct SessionUpdateDialog: View {
         }
     }
 
-    private func openFullDiskAccess() {
+    func openFullDiskAccess() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
             NSWorkspace.shared.open(url)
         }

@@ -78,7 +78,7 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     @ViewBuilder
     private var autoRenewCheckbox: some View {
         if automaticallyUpdates {
-            Toggle("Auto-Renew from Browser Cookies", isOn: $autoRenew)
+            Toggle("Auto-Renew from Your Browser", isOn: $autoRenew)
                 .toggleStyle(.checkbox)
                 .font(.callout)
                 .disabled(isBusy)
@@ -90,11 +90,11 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     private var signInButtonTitle: String {
         signingOutProvider == provider
             ? "Clearing browser session..."
-            : "Sign in in the app…"
+            : "Sign in here…"
     }
 
     private var updateButtonTitle: String {
-        "Update from \(browserName ?? "Browser")…"
+        "Update from your \(browserName ?? "browser")…"
     }
 
     private var dragHandle: some View {

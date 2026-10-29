@@ -49,7 +49,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(signingOutProvider != nil || services.sessionUpdates.isHarvesting)
-                    .help("Sign in all enabled, logged-out agents using browser cookies")
+                    .help("Sign in all enabled, logged-out agents using cookies from your browser")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
@@ -140,7 +140,7 @@ struct SettingsView: View {
     private var automaticUpdatesCheckbox: some View {
         @Bindable var coordinator = services.sessionUpdates
 
-        return Toggle("Auto Update from Browser Cookies", isOn: $coordinator.automaticallyUpdates)
+        return Toggle("Auto Update from Your Browser", isOn: $coordinator.automaticallyUpdates)
             .toggleStyle(.checkbox)
             .disabled(!coordinator.hasAutoRenewApprovals)
             .help("Pause or resume automatic updates for agents with Auto-Renew approval")
