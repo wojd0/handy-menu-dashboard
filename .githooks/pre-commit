@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+if git diff --cached --quiet -- '*.swift' .swiftlint.yml; then
+  exit 0
+fi
+
+if ! command -v swiftlint >/dev/null 2>&1; then
+  echo "SwiftLint is not installed. Install with: brew install swiftlint"
+  exit 1
+fi
+
+exec "$(git rev-parse --show-toplevel)/lint.sh"

@@ -31,6 +31,7 @@ make install      # Build and install to ~/Applications (prompts to replace)
 make install-dev  # Build and install to /Applications and ~/Applications
 make test         # Run unit tests
 make lint         # SwiftLint (optional, advisory)
+make hooks        # Run SwiftLint before each commit, as CI does
 ```
 
 ## Configuration

@@ -1,4 +1,4 @@
-.PHONY: build install install-dev test lint
+.PHONY: build install install-dev test lint hooks
 
 build:
 	./build.sh
@@ -14,3 +14,6 @@ test:
 
 lint:
 	./lint.sh
+
+hooks:
+	git config core.hooksPath .githooks
