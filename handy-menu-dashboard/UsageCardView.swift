@@ -33,7 +33,7 @@ struct UsageCardView: View {
 
                 Text(detailText)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
 
                 if let subtitle {
                     Text(subtitle)

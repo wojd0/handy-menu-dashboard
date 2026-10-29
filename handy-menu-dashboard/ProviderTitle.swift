@@ -5,6 +5,9 @@ struct ProviderTitle: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            Text(provider.displayName)
+                .font(.headline)
+
             Circle()
                 .fill(provider.accentColor)
                 .frame(width: 8, height: 8)
@@ -15,9 +18,6 @@ struct ProviderTitle: View {
                     }
                 }
                 .accessibilityHidden(true)
-
-            Text(provider.displayName)
-                .font(.headline)
         }
     }
 }

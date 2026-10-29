@@ -20,45 +20,9 @@ struct SettingsView: View {
     @State private var autoRenewProvider: Provider?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                ForEach(Provider.ordered(from: providerOrderRaw)) { provider in
-                    section(for: provider)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[provider] = $0 }
-                        .overlay(alignment: .top) { insertionLine(for: provider, after: false).offset(y: -10) }
-                        .overlay(alignment: .bottom) { insertionLine(for: provider, after: true).offset(y: 10) }
-                        .opacity(draggedProvider == provider ? 0.4 : 1)
-                        .onDrop(
-                            of: [.text],
-                            delegate: ProviderDropDelegate(
-                                provider: provider,
-                                height: cardHeights[provider] ?? 0,
-                                draggedProvider: $draggedProvider,
-                                dropIndicator: $dropIndicator,
-                                onReorder: reorder
-                            )
-                        )
-                }
-
-                if !services.sessionUpdates.pending.isEmpty {
-                    Button("Sign in all…") {
-                        ConsentWindowController.shared.show(
-                            services: services,
-                            providers: services.sessionUpdates.pending
-                        )
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(signingOutProvider != nil || services.sessionUpdates.isHarvesting)
-                    .help("Sign in all enabled, logged-out agents using cookies from your browser")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                generalSection
-            }
-            .padding(20)
-        }
+        providersScroll
         .animation(.snappy, value: providerOrderRaw)
-        .frame(width: 460)
+        .frame(width: 529)
         .frame(minHeight: 400, idealHeight: 780, maxHeight: 900)
         .sheet(item: $loginProvider) { provider in
             ProviderLoginSheet(provider: provider, services: services)
@@ -87,6 +51,57 @@ struct SettingsView: View {
                 launchAtLogin = previousValue
             }
         }
+    }
+
+    private var providersScroll: some View {
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    providerCards
+                    Spacer(minLength: 0)
+                    Divider()
+                    generalSection
+                }
+                .frame(minHeight: proxy.size.height)
+            }
+        }
+    }
+
+    private var providerCards: some View {
+        VStack(spacing: 16) {
+                ForEach(Provider.ordered(from: providerOrderRaw)) { provider in
+                    section(for: provider)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[provider] = $0 }
+                        .overlay(alignment: .top) { insertionLine(for: provider, after: false).offset(y: -10) }
+                        .overlay(alignment: .bottom) { insertionLine(for: provider, after: true).offset(y: 10) }
+                        .opacity(draggedProvider == provider ? 0.4 : 1)
+                        .onDrop(
+                            of: [.text],
+                            delegate: ProviderDropDelegate(
+                                provider: provider,
+                                height: cardHeights[provider] ?? 0,
+                                draggedProvider: $draggedProvider,
+                                dropIndicator: $dropIndicator,
+                                onReorder: reorder
+                            )
+                        )
+                }
+
+                if !services.sessionUpdates.pending.isEmpty {
+                    Button("Sign in all") {
+                        ConsentWindowController.shared.show(
+                            services: services,
+                            providers: services.sessionUpdates.pending
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(signingOutProvider != nil || services.sessionUpdates.isHarvesting)
+                    .help("Sign in all enabled, logged-out agents using cookies from your browser")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+        }
+        .padding(20)
     }
 
     private var generalSection: some View {
@@ -119,8 +134,9 @@ struct SettingsView: View {
                     .disabled(menuBarInserted)
             }
         }
-        .padding(16)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
     }
 
     private var browserCookiesRow: some View {

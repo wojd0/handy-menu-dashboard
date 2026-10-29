@@ -65,7 +65,7 @@ struct ClaudeUsageCardView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -84,7 +84,7 @@ struct ClaudeUsageCardView: View {
             if let detail {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
             }
 
             if let resetsAt {

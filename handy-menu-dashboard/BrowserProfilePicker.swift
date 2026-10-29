@@ -23,7 +23,7 @@ struct BrowserProfilePicker: View {
             .disabled(profiles.isEmpty)
             if let errorMessage {
                 Text(errorMessage).font(.caption).foregroundStyle(.secondary)
-                Button("Allow Access to \(browser.displayName) Folder…", action: chooseFolder)
+                Button("Allow Access to \(browser.displayName) Folder", action: chooseFolder)
                     .font(.caption)
             }
         }

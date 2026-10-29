@@ -87,7 +87,7 @@ struct SessionUpdateDialog: View {
 
             cookieAccessDetails
 
-            Button("Approve and Auto-Renew…") {
+            Button("Approve and Auto-Renew") {
                 autoRenewTargets = targets
                 showsAutoRenewApproval = true
             }
@@ -191,8 +191,8 @@ struct SessionUpdateDialog: View {
 
     @ViewBuilder
     private func signInOptions(_ provider: Provider) -> some View {
-        Button("Sign in here…") { onWebViewFallback(provider) }
-        Button("Sign in using \(browserName)…") { signInUsingBrowser(provider) }
+        Button("Sign in here") { onWebViewFallback(provider) }
+        Button("Sign in using \(browserName)") { signInUsingBrowser(provider) }
     }
 
     private func signInUsingBrowser(_ provider: Provider) {
@@ -244,7 +244,7 @@ struct SessionUpdateDialog: View {
                     }
                     Button("Import from Clipboard") { importFromClipboard(browser) }
                     if browser == .safari {
-                        Button("Grant Full Disk Access…") { openFullDiskAccess() }
+                        Button("Grant Full Disk Access") { openFullDiskAccess() }
                     }
                 }
                 .font(.caption)

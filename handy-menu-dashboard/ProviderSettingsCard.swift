@@ -17,7 +17,6 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 dragHandle
-                Image(systemName: provider.iconName)
                 Text(provider.displayName)
                     .font(.headline)
                 if isPending {
@@ -25,6 +24,11 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                         .foregroundStyle(.yellow)
                         .help("Session needs updating")
                 }
+            }
+
+            HStack {
+                Text("Show in menu bar control")
+                    .font(.callout)
                 Spacer()
                 Toggle("", isOn: $service.isEnabled)
                     .toggleStyle(.switch)
@@ -34,10 +38,9 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
             if service.isAuthenticated {
                 extra
 
-                HStack {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Menu Bar Unit")
                         .font(.callout)
-                    Spacer()
                     Picker("", selection: $service.menuBarDisplayMode) {
                         Text(provider.monetaryLabel).tag(MenuBarDisplayMode.monetary)
                         Text("% Used").tag(MenuBarDisplayMode.percentUsed)
@@ -45,19 +48,16 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    .fixedSize()
+                    .frame(maxWidth: .infinity)
                 }
 
                 HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                    autoRenewCheckbox
                     Spacer()
                     Button("Sign Out", action: onSignOut)
                         .buttonStyle(.bordered)
                         .disabled(isBusy)
                 }
-
-                autoRenewCheckbox
             } else {
                 HStack {
                     Button(updateButtonTitle, action: onUpdateFromBrowser)
@@ -89,12 +89,12 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
 
     private var signInButtonTitle: String {
         signingOutProvider == provider
-            ? "Clearing browser session..."
-            : "Sign in here…"
+            ? "Clearing browser session"
+            : "Sign in here"
     }
 
     private var updateButtonTitle: String {
-        "Update from your \(browserName ?? "browser")…"
+        "Update from your \(browserName ?? "browser")"
     }
 
     private var dragHandle: some View {
@@ -107,7 +107,7 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 draggedProvider = provider
                 return NSItemProvider(object: provider.rawValue as NSString)
             } preview: {
-                Label(provider.displayName, systemImage: provider.iconName)
+                Text(provider.displayName)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
