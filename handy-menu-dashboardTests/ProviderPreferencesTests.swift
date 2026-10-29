@@ -21,8 +21,8 @@ struct ProviderPreferencesTests {
         ])
     }
 
-    @Test func claudeBaselineKeyIsUnchanged() {
-        #expect(ProviderPreferences.claudeBaselineKey == "claudeMenuBarBaseline")
+    @Test func claudeUsagePoolKeyIsUnchanged() {
+        #expect(ProviderPreferences.claudeUsagePoolKey == "claudeMenuBarBaseline")
     }
 
     @Test func providersAreDisabledUntilTurnedOn() {
@@ -57,14 +57,14 @@ struct ProviderPreferencesTests {
         #expect(ProviderPreferences.displayMode(for: .claude, in: store) == .monetary)
     }
 
-    @Test func claudeBaselineRoundTrips() {
+    @Test func claudeUsagePoolRoundTrips() {
         let store = InMemoryPreferenceStore()
 
-        #expect(ProviderPreferences.claudeBaseline(in: store) == .usageLimit)
+        #expect(ProviderPreferences.claudeUsagePool(in: store) == .usageLimit)
 
-        ProviderPreferences.setClaudeBaseline(.combined, in: store)
+        ProviderPreferences.setClaudeUsagePool(.combined, in: store)
 
-        #expect(ProviderPreferences.claudeBaseline(in: store) == .combined)
+        #expect(ProviderPreferences.claudeUsagePool(in: store) == .combined)
     }
 
     @Test func theSessionPersistsWhatTheToggleSets() {
@@ -98,7 +98,7 @@ struct ProviderPreferencesTests {
         #expect(service.menuBarDisplayMode == .percentRemaining)
     }
 
-    @Test func claudeStartsFromTheStoredBaseline() {
+    @Test func claudeStartsFromTheStoredUsagePool() {
         let store = InMemoryPreferenceStore(["claudeMenuBarBaseline": "credit"])
 
         let service = ClaudeService(
@@ -107,6 +107,6 @@ struct ProviderPreferencesTests {
             preferences: store
         )
 
-        #expect(service.baseline == .credit)
+        #expect(service.usagePool == .credit)
     }
 }

@@ -72,7 +72,7 @@ struct ClaudeUsageTests {
         #expect(service.percentUsed(for: .usageLimit) == 150)
     }
 
-    @Test func percentRemainingSupportsEveryBaseline() {
+    @Test func percentRemainingSupportsEveryUsagePool() {
         let service = makeService()
         service.spendUsedDollars = 150
         service.spendLimitDollars = 100
@@ -96,7 +96,7 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 50
         service.spendLimitDollars = 100
 
-        #expect(service.menuBarFragment(baseline: .usageLimit, displayMode: .monetary) == "")
+        #expect(service.menuBarFragment(usagePool: .usageLimit, displayMode: .monetary) == "")
     }
 
     @Test func menuBarFragmentDollarsUsageLimitShowsUsedOverLimit() {
@@ -104,7 +104,7 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 2.39
         service.spendLimitDollars = 3000
 
-        #expect(service.menuBarFragment(baseline: .usageLimit, displayMode: .monetary) == "$2/3000")
+        #expect(service.menuBarFragment(usagePool: .usageLimit, displayMode: .monetary) == "$2/3000")
     }
 
     @Test func menuBarFragmentDollarsCreditShowsUsedOverLimit() {
@@ -112,7 +112,7 @@ struct ClaudeUsageTests {
         service.creditUsedDollars = 10.5
         service.creditLimitDollars = 1000
 
-        #expect(service.menuBarFragment(baseline: .credit, displayMode: .monetary) == "$10/1000")
+        #expect(service.menuBarFragment(usagePool: .credit, displayMode: .monetary) == "$10/1000")
     }
 
     @Test func menuBarFragmentDollarsCombinedShowsUsedOverLimit() {
@@ -122,7 +122,7 @@ struct ClaudeUsageTests {
         service.creditUsedDollars = 10.5
         service.creditLimitDollars = 1000
 
-        #expect(service.menuBarFragment(baseline: .combined, displayMode: .monetary) == "$12/4000")
+        #expect(service.menuBarFragment(usagePool: .combined, displayMode: .monetary) == "$12/4000")
     }
 
     @Test func menuBarFragmentPercentRoundsToNearestInt() {
@@ -130,7 +130,7 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 1
         service.spendLimitDollars = 3
 
-        let percent = service.menuBarFragment(baseline: .usageLimit, displayMode: .percentUsed)
+        let percent = service.menuBarFragment(usagePool: .usageLimit, displayMode: .percentUsed)
         #expect(percent == "33%")
     }
 
@@ -139,7 +139,7 @@ struct ClaudeUsageTests {
         service.spendUsedDollars = 5
         service.spendLimitDollars = 4
 
-        let percent = service.menuBarFragment(baseline: .usageLimit, displayMode: .percentRemaining)
+        let percent = service.menuBarFragment(usagePool: .usageLimit, displayMode: .percentRemaining)
         #expect(percent == "-25%")
     }
 
@@ -402,24 +402,24 @@ extension ClaudeUsageTests {
 
     @Test func menuBarFallsBackToSessionWhenChosenPoolIsMissing() {
         let service = makeService(authenticated: true)
-        service.baseline = .usageLimit
+        service.usagePool = .usageLimit
         service.hasSession = true
         service.sessionPercent = 13
 
-        #expect(service.resolvedBaseline == .session)
+        #expect(service.resolvedUsagePool == .session)
         #expect(service.menuBarText == "13%")
     }
 
     @Test func menuBarKeepsChosenPoolWhenItHasData() {
         let service = makeService(authenticated: true)
-        service.baseline = .usageLimit
+        service.usagePool = .usageLimit
         service.hasSpend = true
         service.spendUsedDollars = 5
         service.spendLimitDollars = 100
         service.hasSession = true
         service.sessionPercent = 13
 
-        #expect(service.resolvedBaseline == .usageLimit)
+        #expect(service.resolvedUsagePool == .usageLimit)
         #expect(service.menuBarText == "$5/100")
     }
 
@@ -439,28 +439,28 @@ extension ClaudeUsageTests {
         #expect(UsageMath.resetText(for: now.addingTimeInterval(3 * 86400), now: now) == "Resets in 3 days")
     }
 
-    @Test func availableBaselinesListOnlyPoolsWithData() {
+    @Test func availableUsagePoolsListOnlyPoolsWithData() {
         let service = makeService()
         service.hasSession = true
         service.hasWeekly = true
         service.hasCredit = true
 
-        #expect(service.availableBaselines == [.credit, .session, .weekly])
+        #expect(service.availableUsagePools == [.credit, .session, .weekly])
 
         service.hasSpend = true
 
-        #expect(service.availableBaselines == [.usageLimit, .credit, .combined, .session, .weekly])
+        #expect(service.availableUsagePools == [.usageLimit, .credit, .combined, .session, .weekly])
     }
 
-    @Test func sessionAndWeeklyBaselinesReadPercentWindows() {
+    @Test func sessionAndWeeklyUsagePoolsReadPercentWindows() {
         let service = makeService(authenticated: true)
         service.sessionPercent = 13
         service.weeklyPercent = 3
 
         #expect(service.percentUsed(for: .session) == 13)
         #expect(service.percentRemaining(for: .weekly) == 97)
-        #expect(service.menuBarFragment(baseline: .session, displayMode: .monetary) == "13%")
-        #expect(service.menuBarFragment(baseline: .weekly, displayMode: .percentRemaining) == "97%")
+        #expect(service.menuBarFragment(usagePool: .session, displayMode: .monetary) == "13%")
+        #expect(service.menuBarFragment(usagePool: .weekly, displayMode: .percentRemaining) == "97%")
         #expect(service.detailText(for: .session) == "13% used")
     }
 }

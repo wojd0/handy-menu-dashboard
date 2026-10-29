@@ -8,7 +8,7 @@ protocol PreferenceStoring {
 extension UserDefaults: PreferenceStoring {}
 
 enum ProviderPreferences {
-    static let claudeBaselineKey = "claudeMenuBarBaseline"
+    static let claudeUsagePoolKey = "claudeMenuBarBaseline"
 
     static func isEnabled(_ provider: Provider, in store: any PreferenceStoring) -> Bool {
         (store.object(forKey: provider.enabledKey) as? Bool) ?? false
@@ -41,15 +41,15 @@ enum ProviderPreferences {
         store.set(value.rawValue, forKey: provider.displayModeKey)
     }
 
-    static func claudeBaseline(in store: any PreferenceStoring) -> ClaudeBaseline {
-        guard let rawValue = store.object(forKey: claudeBaselineKey) as? String,
-              let baseline = ClaudeBaseline(rawValue: rawValue) else {
+    static func claudeUsagePool(in store: any PreferenceStoring) -> ClaudeUsagePool {
+        guard let rawValue = store.object(forKey: claudeUsagePoolKey) as? String,
+              let usagePool = ClaudeUsagePool(rawValue: rawValue) else {
             return .usageLimit
         }
-        return baseline
+        return usagePool
     }
 
-    static func setClaudeBaseline(_ value: ClaudeBaseline, in store: any PreferenceStoring) {
-        store.set(value.rawValue, forKey: claudeBaselineKey)
+    static func setClaudeUsagePool(_ value: ClaudeUsagePool, in store: any PreferenceStoring) {
+        store.set(value.rawValue, forKey: claudeUsagePoolKey)
     }
 }

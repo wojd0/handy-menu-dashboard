@@ -203,7 +203,7 @@ struct SettingsView: View {
     private func claudeCard() -> some View {
         @Bindable var claude = services.claude
 
-        let baselines = claude.availableBaselines
+        let usagePools = claude.availableUsagePools
 
         return ProviderSettingsCard(
             service: claude,
@@ -217,16 +217,16 @@ struct SettingsView: View {
             onSignOut: { signOut(claude.provider) },
             onUpdateFromBrowser: { updateFromBrowser(.claude) },
             extra: {
-                if baselines.count > 1 {
+                if usagePools.count > 1 {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Baseline")
+                        Text("Usage Pool")
                             .font(.callout)
-                        Picker("Baseline", selection: Binding(
-                            get: { claude.resolvedBaseline },
-                            set: { claude.baseline = $0 }
+                        Picker("Usage Pool", selection: Binding(
+                            get: { claude.resolvedUsagePool },
+                            set: { claude.usagePool = $0 }
                         )) {
-                            ForEach(baselines) { baseline in
-                                Text(baseline.label).tag(baseline)
+                            ForEach(usagePools) { usagePool in
+                                Text(usagePool.label).tag(usagePool)
                             }
                         }
                         .pickerStyle(.segmented)

@@ -20,10 +20,10 @@ two subscription windows, **session** (`five_hour`) and **weekly** (`seven_day`)
 percent only, with a reset time. The credit pool key is obfuscated and changes (`cinder_cove`,
 `iguana_necktie`). The decoder takes `cinder_cove` first, then the first other object that has `limit_dollars`.
 
-**Baseline** — which Claude pool the menu bar reports: General, Credit, Combined, Session or
-Weekly. Claude-only; no other provider has one. Settings lists only the baselines that have data.
+**Usage pool** — which Claude pool the menu bar reports: General, Credit, Combined, Session or
+Weekly. Claude-only; no other provider has one. Settings lists only the usage pools that have data.
 Combined needs both spend and credit. If the chosen pool has no data, the menu bar uses Session
-(then Weekly) instead. This is `resolvedBaseline`.
+(then Weekly) instead. This is `resolvedUsagePool`.
 
 **Menu-bar fragment** — the short string one provider contributes to the menu-bar image, e.g.
 `$150/100`, `5.3K/350K`, `98%`. Fragments are laid out into columns and rasterised through

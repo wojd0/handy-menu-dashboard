@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum ClaudeBaseline: String, CaseIterable, Identifiable {
+enum ClaudeUsagePool: String, CaseIterable, Identifiable {
     case usageLimit
     case credit
     case combined
@@ -25,7 +25,7 @@ enum ClaudeBaseline: String, CaseIterable, Identifiable {
 final class ClaudeService: UsageDisplaying {
     let provider = Provider.claude
 
-    var reading: UsageReading { reading(for: resolvedBaseline) }
+    var reading: UsageReading { reading(for: resolvedUsagePool) }
 
     var isEnabled: Bool {
         get { session.isEnabled }
@@ -37,16 +37,16 @@ final class ClaudeService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
-    var baseline: ClaudeBaseline {
-        get { storedBaseline }
+    var usagePool: ClaudeUsagePool {
+        get { storedUsagePool }
         set {
-            storedBaseline = newValue
-            ProviderPreferences.setClaudeBaseline(newValue, in: preferences)
+            storedUsagePool = newValue
+            ProviderPreferences.setClaudeUsagePool(newValue, in: preferences)
         }
     }
 
     var menuBarText: String {
-        menuBarFragment(baseline: resolvedBaseline, displayMode: menuBarDisplayMode)
+        menuBarFragment(usagePool: resolvedUsagePool, displayMode: menuBarDisplayMode)
     }
 
     var spendUsedDollars: Double = 0
@@ -63,7 +63,7 @@ final class ClaudeService: UsageDisplaying {
     var hasSession = false
     var hasWeekly = false
 
-    private var storedBaseline: ClaudeBaseline
+    private var storedUsagePool: ClaudeUsagePool
 
     @ObservationIgnored private let preferences: any PreferenceStoring
     @ObservationIgnored private let session: UsageSession
@@ -88,19 +88,19 @@ final class ClaudeService: UsageDisplaying {
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
-    var availableBaselines: [ClaudeBaseline] {
-        ClaudeBaseline.allCases.filter(hasPool(for:))
+    var availableUsagePools: [ClaudeUsagePool] {
+        ClaudeUsagePool.allCases.filter(hasPool(for:))
     }
 
-    var resolvedBaseline: ClaudeBaseline {
-        if hasPool(for: baseline) { return baseline }
+    var resolvedUsagePool: ClaudeUsagePool {
+        if hasPool(for: usagePool) { return usagePool }
         if hasSession { return .session }
         if hasWeekly { return .weekly }
-        return baseline
+        return usagePool
     }
 
-    func hasPool(for baseline: ClaudeBaseline) -> Bool {
-        switch baseline {
+    func hasPool(for usagePool: ClaudeUsagePool) -> Bool {
+        switch usagePool {
         case .usageLimit: hasSpend
         case .credit: hasCredit
         case .combined: hasSpend && hasCredit
@@ -109,8 +109,8 @@ final class ClaudeService: UsageDisplaying {
         }
     }
 
-    func reading(for baseline: ClaudeBaseline) -> UsageReading {
-        switch baseline {
+    func reading(for usagePool: ClaudeUsagePool) -> UsageReading {
+        switch usagePool {
         case .usageLimit:
             makeReading(used: spendUsedDollars, limit: spendLimitDollars)
         case .credit:
@@ -132,21 +132,21 @@ final class ClaudeService: UsageDisplaying {
         UsageReading(used: percent, limit: 100, amountStyle: .percent, detailStyle: .percent)
     }
 
-    func percentUsed(for baseline: ClaudeBaseline) -> Double {
-        reading(for: baseline).percentUsed
+    func percentUsed(for usagePool: ClaudeUsagePool) -> Double {
+        reading(for: usagePool).percentUsed
     }
 
-    func percentRemaining(for baseline: ClaudeBaseline) -> Double {
-        reading(for: baseline).percentRemaining
+    func percentRemaining(for usagePool: ClaudeUsagePool) -> Double {
+        reading(for: usagePool).percentRemaining
     }
 
-    func detailText(for baseline: ClaudeBaseline) -> String {
-        reading(for: baseline).detailText
+    func detailText(for usagePool: ClaudeUsagePool) -> String {
+        reading(for: usagePool).detailText
     }
 
-    func menuBarFragment(baseline: ClaudeBaseline, displayMode: MenuBarDisplayMode) -> String {
+    func menuBarFragment(usagePool: ClaudeUsagePool, displayMode: MenuBarDisplayMode) -> String {
         guard isActive else { return "" }
-        return reading(for: baseline).menuBarText(displayMode)
+        return reading(for: usagePool).menuBarText(displayMode)
     }
 
     init(
@@ -156,7 +156,7 @@ final class ClaudeService: UsageDisplaying {
         preferences: any PreferenceStoring = UserDefaults.standard
     ) {
         self.preferences = preferences
-        storedBaseline = ProviderPreferences.claudeBaseline(in: preferences)
+        storedUsagePool = ProviderPreferences.claudeUsagePool(in: preferences)
         session = UsageSession(provider: .claude, keychain: keychain, preferences: preferences)
         transport = UsageTransport(dataLoader: dataLoader)
         session.loadStoredCredential()

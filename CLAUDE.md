@@ -98,8 +98,8 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   **credit** (monthly dollar pool; the payload key is obfuscated and changes, so
   `ClaudeUsageResponse` takes `cinder_cove` or the first other object with `limit_dollars`), and the
   subscription windows **session** (`five_hour`) and **weekly** (`seven_day`), which report percent only.
-  Five baselines (`usageLimit`, `credit`, `combined`, `session`, `weekly`). Each refresh replaces all pools, so
-  a pool that leaves the payload clears. `resolvedBaseline` falls back to session, then weekly, when the chosen pool is empty.
+  Five usage pools (`usageLimit`, `credit`, `combined`, `session`, `weekly`). Each refresh replaces all pools, so
+  a pool that leaves the payload clears. `resolvedUsagePool` falls back to session, then weekly, when the chosen pool is empty.
 - **ChatGPTService** — Fetches monthly credits from the account's spend-control endpoint. Refreshes the bearer
   token through the session endpoint and verifies its account claim against the `_account` cookie.
 
@@ -118,7 +118,7 @@ tick; Copilot and ChatGPT **discard** it. This is deliberate and pinned by `Sess
   plus a bar, versus Claude's two pool rows gated on `hasSpend`/`hasCredit`.
 - **UsageProgressBar** — Gradient progress bar (green→yellow→orange→red).
 - **SettingsView** — Reorderable provider cards plus the General section. Each card is one generic
-  `ProviderSettingsCard<Service, Extra>`; Claude's baseline picker passes through the `Extra` slot. The card is
+  `ProviderSettingsCard<Service, Extra>`; Claude's usage pool picker passes through the `Extra` slot. The card is
   **generic, not existential** — `@Bindable var service: any UsageDisplaying` does not compile.
 - **CursorLoginView** / **ClaudeLoginView** — Simple `WKWebView` sheets that harvest cookies and persist them
   without validating. Both use `Provider.harvest`; Claude's rule gates on host only, not on leaving `/login`.
