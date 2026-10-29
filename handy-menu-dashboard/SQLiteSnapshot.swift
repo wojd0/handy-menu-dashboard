@@ -7,14 +7,7 @@ nonisolated struct SQLiteSnapshot {
 
     init(of source: URL) throws(BrowserCookieError) {
         let fileManager = FileManager.default
-        do {
-            _ = try fileManager.attributesOfItem(atPath: source.path)
-        } catch {
-            let error = error as NSError
-            if error.code == NSFileReadNoPermissionError { throw .accessDenied }
-            if error.code == NSFileReadNoSuchFileError { throw .noProfile }
-            throw .unreadable
-        }
+        try Self.checkReadable(source, fileManager: fileManager)
 
         let directory = fileManager.temporaryDirectory
             .appending(path: "hmd-cookie-\(UUID().uuidString)")
@@ -32,6 +25,34 @@ nonisolated struct SQLiteSnapshot {
         }
 
         let copyDestination = directory.appending(path: "db.sqlite")
+        try Self.copyDatabase(from: source, to: copyDestination, fileManager: fileManager)
+
+        var handle: OpaquePointer?
+        let flags = SQLITE_OPEN_READONLY
+        guard sqlite3_open_v2(copyDestination.path, &handle, flags, nil) == SQLITE_OK, let handle else {
+            if let handle { sqlite3_close(handle) }
+            throw .unreadable
+        }
+        database = handle
+        opened = true
+    }
+
+    private static func checkReadable(_ source: URL, fileManager: FileManager) throws(BrowserCookieError) {
+        do {
+            _ = try fileManager.attributesOfItem(atPath: source.path)
+        } catch {
+            let error = error as NSError
+            if error.code == NSFileReadNoPermissionError { throw .accessDenied }
+            if error.code == NSFileReadNoSuchFileError { throw .noProfile }
+            throw .unreadable
+        }
+    }
+
+    private static func copyDatabase(
+        from source: URL,
+        to copyDestination: URL,
+        fileManager: FileManager
+    ) throws(BrowserCookieError) {
         for suffix in ["", "-wal", "-shm"] {
             let sidecar = URL(fileURLWithPath: source.path + suffix)
             guard fileManager.fileExists(atPath: sidecar.path) else { continue }
@@ -47,15 +68,6 @@ nonisolated struct SQLiteSnapshot {
                 throw .unreadable
             }
         }
-
-        var handle: OpaquePointer?
-        let flags = SQLITE_OPEN_READONLY
-        guard sqlite3_open_v2(copyDestination.path, &handle, flags, nil) == SQLITE_OK, let handle else {
-            if let handle { sqlite3_close(handle) }
-            throw .unreadable
-        }
-        database = handle
-        opened = true
     }
 
     func rows(_ sql: String) throws(BrowserCookieError) -> [[SQLiteValue]] {

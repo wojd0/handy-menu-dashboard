@@ -370,12 +370,14 @@ struct SessionUpdateCoordinatorTests {
         #expect(harness.coordinator.phase == .idle)
         #expect(harness.notifier.notifications.isEmpty)
     }
+}
 
-    private var cursorCookies: [BrowserCookie] {
+private extension SessionUpdateCoordinatorTests {
+    var cursorCookies: [BrowserCookie] {
         [BrowserCookie(domain: ".cursor.com", name: "WorkosCursorSessionToken", value: "tok")]
     }
 
-    private var cursorLoader: UsageDataLoader {
+    var cursorLoader: UsageDataLoader {
         { request in
             if request.url!.path == "/api/auth/me" {
                 return try httpResponse(for: request, json: ["email": "a@b.c", "name": "Ada"])
@@ -387,11 +389,11 @@ struct SessionUpdateCoordinatorTests {
         }
     }
 
-    private var unauthorizedLoader: UsageDataLoader {
+    var unauthorizedLoader: UsageDataLoader {
         { request in try httpResponse(for: request, status: 401, json: [:]) }
     }
 
-    private func setupTest(_ config: Config) -> Harness {
+    func setupTest(_ config: Config) -> Harness {
         let keychain = InMemoryKeychainStore()
         for provider in config.preauthenticated {
             keychain.saveString(key: provider.keychainKey, value: "preloaded=1")
