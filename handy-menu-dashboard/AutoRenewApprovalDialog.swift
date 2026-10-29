@@ -29,7 +29,9 @@ struct AutoRenewApprovalDialog: View {
                 .font(.headline)
                 .foregroundStyle(.orange)
 
-            Text("From now on, Handy Menu Dashboard will automatically update these agents' sessions from your browser cookies in the background. You will not be asked to approve each update and do not need to be present.")
+            Text("From now on, Handy Menu Dashboard will automatically update these agents' sessions "
+                + "from your browser cookies in the background. "
+                + "You will not be asked to approve each update and do not need to be present.")
 
             ForEach(providers) { provider in
                 Label(provider.displayName, systemImage: provider.iconName)
@@ -43,11 +45,14 @@ struct AutoRenewApprovalDialog: View {
                     .id(browser)
             }
 
-            Text("Only these agents' session cookies are read. They are stored in your Keychain and sent only to the relevant provider to fetch usage. Automatic renewal runs while the app is open and the agent is enabled.")
+            Text("Only these agents' session cookies are read. "
+                + "They are stored in your Keychain and sent only to the relevant provider to fetch usage. "
+                + "Automatic renewal runs while the app is open and the agent is enabled.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("You can pause all automatic updates in General settings, or uncheck an agent's Auto-Renew checkbox to forget this approval.")
+            Text("You can pause all automatic updates in General settings, "
+                + "or uncheck an agent's Auto-Renew checkbox to forget this approval.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
