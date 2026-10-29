@@ -35,7 +35,7 @@ held in a `ServiceSet` created as `@State` in the `App` struct and passed as one
 shared sits behind modules the shell depends on.
 
 Per-provider facts — display name, icon, accent, keychain key, error noun, preference keys, monetary label,
-sign-in blurb, credential policy, cookie harvest rule — are data on the `Provider` enum, not branches at
+credential policy, cookie harvest rule — are data on the `Provider` enum, not branches at
 call sites. `ServiceSet`'s subscript is the single dispatch point from a `Provider` to its service.
 
 See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that should not be re-litigated.

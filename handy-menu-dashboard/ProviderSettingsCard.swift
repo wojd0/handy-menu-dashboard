@@ -4,6 +4,7 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     @Bindable var service: Service
     @Binding var draggedProvider: Provider?
     @Binding var autoRenew: Bool
+    let automaticallyUpdates: Bool
     let signingOutProvider: Provider?
     var isPending: Bool = false
     var browserName: String?
@@ -31,18 +32,6 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
             }
 
             if service.isAuthenticated {
-                HStack {
-                    Label("Signed in", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("Sign Out", action: onSignOut)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .disabled(isBusy)
-                }
-
-                autoRenewCheckbox
-
                 extra
 
                 HStack {
@@ -58,13 +47,18 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                     .labelsHidden()
                     .fixedSize()
                 }
-            } else {
-                Text(provider.signInBlurb)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack {
+                    Label("Signed in", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Button("Sign Out", action: onSignOut)
+                        .buttonStyle(.bordered)
+                        .disabled(isBusy)
+                }
+
                 autoRenewCheckbox
+            } else {
                 HStack {
                     Button(updateButtonTitle, action: onUpdateFromBrowser)
                         .buttonStyle(.borderedProminent)
@@ -81,11 +75,14 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
 
     private var provider: Provider { service.provider }
 
+    @ViewBuilder
     private var autoRenewCheckbox: some View {
-        Toggle("Auto-Renew from Browser Cookies", isOn: $autoRenew)
-            .toggleStyle(.checkbox)
-            .font(.callout)
-            .disabled(isBusy)
+        if automaticallyUpdates {
+            Toggle("Auto-Renew from Browser Cookies", isOn: $autoRenew)
+                .toggleStyle(.checkbox)
+                .font(.callout)
+                .disabled(isBusy)
+        }
     }
 
     private var isBusy: Bool { signingOutProvider != nil }
@@ -130,6 +127,7 @@ extension ProviderSettingsCard where Extra == EmptyView {
         service: Service,
         draggedProvider: Binding<Provider?>,
         autoRenew: Binding<Bool>,
+        automaticallyUpdates: Bool,
         signingOutProvider: Provider?,
         isPending: Bool = false,
         browserName: String? = nil,
@@ -141,6 +139,7 @@ extension ProviderSettingsCard where Extra == EmptyView {
             service: service,
             draggedProvider: draggedProvider,
             autoRenew: autoRenew,
+            automaticallyUpdates: automaticallyUpdates,
             signingOutProvider: signingOutProvider,
             isPending: isPending,
             browserName: browserName,
