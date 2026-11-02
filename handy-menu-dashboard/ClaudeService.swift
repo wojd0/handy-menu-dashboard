@@ -96,6 +96,8 @@ final class ClaudeService: UsageDisplaying {
         if hasPool(for: usagePool) { return usagePool }
         if hasSession { return .session }
         if hasWeekly { return .weekly }
+        if hasSpend { return .usageLimit }
+        if hasCredit { return .credit }
         return usagePool
     }
 
