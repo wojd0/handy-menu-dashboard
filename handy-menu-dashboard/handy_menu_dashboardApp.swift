@@ -21,6 +21,9 @@ struct HandyMenuDashboardApp: App {
 
         WindowGroup("Settings", id: SettingsWindow.id) {
             SettingsView(services: services)
+                .windowMinimizeBehavior(.disabled)
+                .windowFullScreenBehavior(.disabled)
+                .background(CloseOnlyWindowButtons())
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)

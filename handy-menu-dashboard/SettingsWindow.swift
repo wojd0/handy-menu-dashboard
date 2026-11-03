@@ -18,3 +18,22 @@ enum SettingsWindow {
         }
     }
 }
+
+struct CloseOnlyWindowButtons: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        CloseOnlyWindowButtonsView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private final class CloseOnlyWindowButtonsView: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        window.styleMask.remove(.miniaturizable)
+        window.collectionBehavior.insert(.fullScreenNone)
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+    }
+}
