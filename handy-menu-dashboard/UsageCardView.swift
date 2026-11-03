@@ -23,12 +23,6 @@ struct UsageCardView: View {
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(isOverLimit ? .red : .primary)
-
-                    if isOverLimit {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                            .font(.caption)
-                    }
                 }
 
                 Text(detailText)

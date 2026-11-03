@@ -73,12 +73,6 @@ struct ClaudeUsageCardView: View {
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(isOverLimit ? .red : .primary)
-
-                if isOverLimit {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .font(.caption2)
-                }
             }
 
             if let detail {
