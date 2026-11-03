@@ -79,7 +79,8 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   `adoptBrowserCookies` on each service routes harvested cookies through the same adopt path as the
   WebView sign-in. Sign Out disables the provider so its warning does not return immediately.
   `UserNotificationsNotifier` is the notification-center delegate; a click calls `onNotificationOpened`,
-  which the `App` wires to `ConsentWindowController`. The panel hosts `SessionUpdateDialog` and shows
+  which `MenuBarLabel` wires to open Settings and call `requestConsent`. Settings presents
+  `consentRequest` as a sheet: `SessionUpdateSheet` hosts `SessionUpdateDialog` and shows
   `ProviderLoginSheet` for the web-view fallback; Settings opens it for a single provider.
 - **`KeychainStoring` / `KeychainStore`** — Protocol + production implementation wrapping `SecItem*`. Tests
   use `InMemoryKeychainStore`. Credentials share the `com.wojd0.dashboard.credentials` entry, cached per

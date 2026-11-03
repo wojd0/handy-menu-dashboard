@@ -20,12 +20,17 @@ struct SettingsView: View {
     @State private var autoRenewProvider: Provider?
 
     var body: some View {
+        @Bindable var coordinator = services.sessionUpdates
+
         providersScroll
         .animation(.snappy, value: providerOrderRaw)
         .frame(width: 529)
         .frame(minHeight: 400, idealHeight: 780, maxHeight: 900)
         .sheet(item: $loginProvider) { provider in
             ProviderLoginSheet(provider: provider, services: services)
+        }
+        .sheet(item: $coordinator.consentRequest) { request in
+            SessionUpdateSheet(services: services, providers: request.providers)
         }
         .sheet(item: $autoRenewProvider) { provider in
             AutoRenewApprovalDialog(coordinator: services.sessionUpdates, providers: [provider]) { profile in
@@ -89,10 +94,7 @@ struct SettingsView: View {
 
                 if !services.sessionUpdates.pending.isEmpty {
                     Button("Sign in all") {
-                        ConsentWindowController.shared.show(
-                            services: services,
-                            providers: services.sessionUpdates.pending
-                        )
+                        services.sessionUpdates.requestConsent(for: services.sessionUpdates.pending)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(signingOutProvider != nil || services.sessionUpdates.isHarvesting)
@@ -198,7 +200,7 @@ struct SettingsView: View {
     }
 
     private func updateFromBrowser(_ provider: Provider) {
-        ConsentWindowController.shared.show(services: services, providers: [provider])
+        services.sessionUpdates.requestConsent(for: [provider])
     }
 
     private func card<Service: UsageDisplaying>(_ service: Service) -> some View {
@@ -237,17 +239,14 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Usage Pool")
                             .font(.callout)
-                        Picker("Usage Pool", selection: Binding(
-                            get: { claude.resolvedUsagePool },
-                            set: { claude.usagePool = $0 }
-                        )) {
-                            ForEach(usagePools) { usagePool in
-                                Text(usagePool.label).tag(usagePool)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .fixedSize(horizontal: false, vertical: true)
+                        FullWidthSegmentedPicker(
+                            label: "Usage Pool",
+                            selection: Binding(
+                                get: { claude.resolvedUsagePool },
+                                set: { claude.usagePool = $0 }
+                            ),
+                            options: usagePools.map { ($0.label, $0) }
+                        )
                     }
                 }
             }

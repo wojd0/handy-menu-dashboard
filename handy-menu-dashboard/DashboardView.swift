@@ -106,16 +106,6 @@ struct DashboardView: View {
     }
 
     private func openSettings() {
-        openWindow(id: "settings")
-
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-
-            let settingsWindow = NSApplication.shared.windows.first { window in
-                window.identifier?.rawValue.contains("settings") == true || window.title == "Settings"
-            }
-            settingsWindow?.makeKeyAndOrderFront(nil)
-            settingsWindow?.orderFrontRegardless()
-        }
+        SettingsWindow.open(with: openWindow)
     }
 }

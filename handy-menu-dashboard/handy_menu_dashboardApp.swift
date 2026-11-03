@@ -7,9 +7,6 @@ struct HandyMenuDashboardApp: App {
 
     init() {
         let services = AppRuntime.makeServices()
-        services.sessionUpdates.onNotificationOpened = {
-            ConsentWindowController.shared.show(services: services)
-        }
         _services = State(initialValue: services)
         MenuBarDisplayMode.migrateLegacyPreferences()
     }
@@ -22,7 +19,7 @@ struct HandyMenuDashboardApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        WindowGroup("Settings", id: "settings") {
+        WindowGroup("Settings", id: SettingsWindow.id) {
             SettingsView(services: services)
         }
         .windowResizability(.contentSize)
@@ -35,8 +32,21 @@ struct MenuBarLabel: View {
     @AppStorage(Provider.orderStorageKey) private var providerOrderRaw = Provider.defaultOrderRaw
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
+        content
+            .onAppear {
+                let coordinator = services.sessionUpdates
+                coordinator.onNotificationOpened = { [openWindow] in
+                    SettingsWindow.open(with: openWindow)
+                    coordinator.requestConsent()
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         let lines = Provider.ordered(from: providerOrderRaw)
             .map { MenuBarLine(provider: $0, text: services[$0].menuBarText) }
             .filter { !$0.text.isEmpty }

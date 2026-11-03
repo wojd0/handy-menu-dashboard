@@ -41,14 +41,15 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Menu Bar Unit")
                         .font(.callout)
-                    Picker("", selection: $service.menuBarDisplayMode) {
-                        Text(provider.monetaryLabel).tag(MenuBarDisplayMode.monetary)
-                        Text("% Used").tag(MenuBarDisplayMode.percentUsed)
-                        Text("% Remaining").tag(MenuBarDisplayMode.percentRemaining)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
+                    FullWidthSegmentedPicker(
+                        label: "Menu Bar Unit",
+                        selection: $service.menuBarDisplayMode,
+                        options: [
+                            (provider.monetaryLabel, .monetary),
+                            ("% Used", .percentUsed),
+                            ("% Remaining", .percentRemaining)
+                        ]
+                    )
                 }
 
                 HStack {

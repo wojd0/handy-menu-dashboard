@@ -13,8 +13,6 @@ struct SessionUpdateDialog: View {
     @State private var manualText = ""
     @State private var manualError: String?
     @State private var browserError: String?
-    @State private var showsAutoRenewApproval = false
-    @State private var autoRenewTargets: [Provider] = []
 
     private var home: URL { BrowserHome.current }
 
@@ -33,17 +31,6 @@ struct SessionUpdateDialog: View {
         }
         .padding(18)
         .frame(width: width)
-        .sheet(isPresented: $showsAutoRenewApproval) {
-            AutoRenewApprovalDialog(
-                coordinator: coordinator,
-                providers: autoRenewTargets,
-                initialProfile: selectedProfile
-            ) { profile in
-                selectedProfile = profile
-                showsAutoRenewApproval = false
-                approve(autoRenewTargets, autoRenew: true)
-            }
-        }
         .onChange(of: coordinator.phase) { _, phase in
             guard case .finished(let results) = phase,
                   !results.isEmpty,
@@ -67,11 +54,8 @@ struct SessionUpdateDialog: View {
     private var requestBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(targets) { provider in
-                HStack(spacing: 8) {
-                    Image(systemName: provider.iconName)
-                    Text(provider.displayName)
-                        .font(.callout)
-                }
+                Text(provider.displayName)
+                    .font(.callout)
             }
 
             Divider()
@@ -85,14 +69,7 @@ struct SessionUpdateDialog: View {
                     .disabled(isWorking)
             }
 
-            cookieAccessDetails
-
-            Button("Approve and Auto-Renew") {
-                autoRenewTargets = targets
-                showsAutoRenewApproval = true
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(isWorking || coordinator.isHarvesting || targets.isEmpty || needsProfile)
+            CookieAccessDetails(providers: targets, browser: coordinator.resolvedBrowser, home: home)
 
             HStack {
                 Button("Cancel") {
@@ -256,55 +233,8 @@ struct SessionUpdateDialog: View {
         }
     }
 
-    private var cookieDomains: [String] {
-        targets
-            .map { provider in
-                switch provider.harvest.domainMatch {
-                case .exactOrSuffix(let domain), .contains(let domain): domain
-                }
-            }
-            .reduced()
-    }
-
     private var browserName: String {
         coordinator.resolvedBrowser.map { "your \($0.displayName)" } ?? "your browser"
-    }
-
-    private var cookieAccessDetails: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Cookie sources")
-                    .fontWeight(.semibold)
-                Text("Handy Menu Dashboard will read cookies from \(browserName) on this Mac for:")
-                    .foregroundStyle(.secondary)
-
-                ForEach(cookieDomains, id: \.self) { domain in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("•")
-                            .foregroundStyle(.secondary)
-                        Text(domain)
-                            .font(.system(.caption, design: .monospaced))
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("How your cookies are used")
-                    .fontWeight(.semibold)
-                Text("Cookies are saved in your Keychain on this Mac "
-                    + "and used only to authenticate with each provider and fetch your usage.")
-                    .foregroundStyle(.secondary)
-                Text("They do not leave this device except for these requests to the relevant provider.")
-            }
-
-            if let browser = coordinator.resolvedBrowser, isChromium(browser) {
-                Text("macOS may ask to allow access to '\(browser.displayName) Safe Storage'.")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .font(.caption)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var supportsProfiles: Bool {
@@ -316,24 +246,15 @@ struct SessionUpdateDialog: View {
 }
 
 private extension SessionUpdateDialog {
-    func isChromium(_ browser: Browser) -> Bool {
-        if case .chromium = browser.engine(home: home) { return true }
-        return false
-    }
-
     func needsManual(_ results: [Provider: SessionUpdateCoordinator.HarvestResult]) -> Bool {
         results.values.contains { $0 == .accessDenied || $0 == .keyDenied }
     }
 
-    func approve(_ providers: [Provider], autoRenew: Bool = false) {
+    func approve(_ providers: [Provider]) {
         isWorking = true
         Task {
             let profile = supportsProfiles ? selectedProfile : nil
-            if autoRenew {
-                await coordinator.approveAndAutoRenew(providers, profile: profile)
-            } else {
-                await coordinator.approve(providers, profile: profile)
-            }
+            await coordinator.approve(providers, profile: profile)
             isWorking = false
         }
     }
@@ -361,12 +282,5 @@ private extension SessionUpdateDialog {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
             NSWorkspace.shared.open(url)
         }
-    }
-}
-
-private extension Array where Element == String {
-    func reduced() -> [String] {
-        var seen = Set<String>()
-        return filter { seen.insert($0).inserted }
     }
 }

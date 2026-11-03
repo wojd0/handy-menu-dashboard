@@ -19,10 +19,16 @@ final class SessionUpdateCoordinator {
         case finished([Provider: HarvestResult])
     }
 
+    struct ConsentRequest: Identifiable {
+        let id = UUID()
+        let providers: [Provider]?
+    }
+
     private(set) var pending: [Provider] = []
     private(set) var phase: Phase = .idle
     private(set) var isAutomaticallyUpdating = false
     private(set) var autoRenewProviders: Set<Provider>
+    var consentRequest: ConsentRequest?
     private var automaticUpdatesEnabled: Bool
     var source: BrowserCookieSource {
         didSet { source.save(to: preferences) }
@@ -110,6 +116,12 @@ final class SessionUpdateCoordinator {
         let targets = providers.isEmpty ? pending : providers
         enableAutoRenew(targets, profile: profile)
         await approve(targets, profile: profile)
+    }
+
+    func requestConsent(for providers: [Provider]? = nil) {
+        guard !isHarvesting, !(providers ?? pending).isEmpty else { return }
+        skip()
+        consentRequest = ConsentRequest(providers: providers)
     }
 
     var resolvedBrowser: Browser? {
