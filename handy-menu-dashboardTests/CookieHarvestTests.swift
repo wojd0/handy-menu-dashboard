@@ -65,6 +65,19 @@ struct CookieHarvestTests {
         #expect(harvested?.first?.domain == ".claude.ai")
     }
 
+    @Test func lookalikeDomainsAreNeverHarvested() {
+        let lookalikes = [
+            (Provider.cursor, cookie("WorkosCursorSessionToken", domain: ".notcursor.com")),
+            (Provider.claude, cookie("sessionKey", domain: ".claude.ai.example.com")),
+            (Provider.chatgpt, cookie("_account", domain: ".fakechatgpt.com"))
+        ]
+
+        for (provider, lookalike) in lookalikes {
+            #expect(provider.harvest.domainMatch.matches(lookalike.domain) == false)
+        }
+        #expect(Provider.cursor.harvest.acceptsNavigation(to: url("https://www.notcursor.com/settings")) == false)
+    }
+
     @Test func everyProviderStartsOnItsOwnHost() {
         let starts = Provider.allCases.map { $0.harvest.startURL.absoluteString }
 

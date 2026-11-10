@@ -80,7 +80,7 @@ extension Provider {
             CookieHarvest(
                 startURL: URL(string: "https://www.cursor.com/settings")!,
                 requiredPathFragments: ["/settings", "/dashboard"],
-                domainMatch: .contains("cursor.com"),
+                domainMatch: .exactOrSuffix("cursor.com"),
                 sessionRule: .nameContainsAny(["session", "token"]),
                 websiteDataDomains: ["cursor.com"]
             )
@@ -96,7 +96,7 @@ extension Provider {
             CookieHarvest(
                 startURL: URL(string: "https://claude.ai/login")!,
                 requiredPathFragments: [],
-                domainMatch: .contains("claude.ai"),
+                domainMatch: .exactOrSuffix("claude.ai"),
                 sessionRule: .anyNamed(["sessionKey"], requireNonEmptyValue: false),
                 websiteDataDomains: ["claude.ai"]
             )
@@ -104,7 +104,7 @@ extension Provider {
             CookieHarvest(
                 startURL: URL(string: "https://chatgpt.com/")!,
                 requiredPathFragments: [],
-                domainMatch: .contains("chatgpt.com"),
+                domainMatch: .exactOrSuffix("chatgpt.com"),
                 sessionRule: .prefixedAndNamed(prefix: "__Secure-next-auth.session-token", required: "_account"),
                 websiteDataDomains: ["chatgpt.com", "openai.com"]
             )
