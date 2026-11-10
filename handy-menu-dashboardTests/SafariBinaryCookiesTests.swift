@@ -15,6 +15,30 @@ struct SafariBinaryCookiesTests {
         #expect(cookies.first?.value == "abc123")
     }
 
+    @Test func skipsACookieThatHasExpired() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let data = buildFile(
+            cookie: BrowserCookie(domain: "claude.ai", name: "sessionKey", value: "old"),
+            expiry: now.timeIntervalSinceReferenceDate - 60
+        )
+
+        let cookies = try SafariBinaryCookies.parse(data, now: now)
+
+        #expect(cookies.isEmpty)
+    }
+
+    @Test func keepsACookieThatExpiresLater() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let data = buildFile(
+            cookie: BrowserCookie(domain: "claude.ai", name: "sessionKey", value: "fresh"),
+            expiry: now.timeIntervalSinceReferenceDate + 60
+        )
+
+        let cookies = try SafariBinaryCookies.parse(data, now: now)
+
+        #expect(cookies.map(\.value) == ["fresh"])
+    }
+
     @Test func rejectsAPageCountLargerThanTheFile() {
         let data = Data("cook".utf8) + uint32BE(.max)
 
@@ -36,8 +60,8 @@ struct SafariBinaryCookiesTests {
         #expect(thrown == .unreadable)
     }
 
-    private func buildFile(cookie: BrowserCookie) -> Data {
-        let record = buildRecord(cookie)
+    private func buildFile(cookie: BrowserCookie, expiry: Double = 0) -> Data {
+        let record = buildRecord(cookie, expiry: expiry)
 
         var page = Data()
         page.append(uint32BE(0x0000_0100))
@@ -54,7 +78,7 @@ struct SafariBinaryCookiesTests {
         return file
     }
 
-    private func buildRecord(_ cookie: BrowserCookie) -> Data {
+    private func buildRecord(_ cookie: BrowserCookie, expiry: Double) -> Data {
         let stringsStart = 48
         let domainBytes = Data((cookie.domain + "\0").utf8)
         let nameBytes = Data((cookie.name + "\0").utf8)
@@ -71,6 +95,7 @@ struct SafariBinaryCookiesTests {
         record.replaceSubrange(20..<24, with: uint32LE(UInt32(nameOffset)))
         record.replaceSubrange(24..<28, with: uint32LE(UInt32(pathOffset)))
         record.replaceSubrange(28..<32, with: uint32LE(UInt32(valueOffset)))
+        record.replaceSubrange(40..<48, with: withUnsafeBytes(of: expiry.bitPattern.littleEndian) { Data($0) })
         record.append(domainBytes)
         record.append(nameBytes)
         record.append(pathBytes)
