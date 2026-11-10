@@ -168,6 +168,34 @@ struct UsageSessionTests {
         #expect(session.isCurrent("s=1"))
     }
 
+    @Test func retainingProvidersStillRefreshOnTheNextTickAfterAuthExpiry() {
+        let session = makeSession(provider: .claude)
+        session.persist("s=1")
+
+        session.absorb(.authExpired)
+
+        #expect(session.isActive == false)
+        #expect(session.refreshesOnTick)
+    }
+
+    @Test func discardingProvidersStopRefreshingOnTheTickAfterAuthExpiry() {
+        let session = makeSession(provider: .chatgpt)
+        session.persist("s=1")
+
+        session.absorb(.authExpired)
+
+        #expect(session.refreshesOnTick == false)
+    }
+
+    @Test func aDisabledProviderDoesNotRefreshOnTheTick() {
+        let session = makeSession(provider: .cursor)
+        session.persist("s=1")
+
+        session.isEnabled = false
+
+        #expect(session.refreshesOnTick == false)
+    }
+
     @Test func discardingProvidersDropTheCredentialThroughAuthExpiry() {
         let keychain = InMemoryKeychainStore()
         let session = makeSession(provider: .copilot, keychain: keychain)

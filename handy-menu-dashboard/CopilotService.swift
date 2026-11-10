@@ -206,7 +206,7 @@ final class CopilotService: UsageDisplaying {
 
     private func startAutoRefresh() {
         refreshLoop.start { [weak self] in
-            guard let self, self.isActive else { return }
+            guard let self, self.session.refreshesOnTick else { return }
             await self.refresh()
         }
     }

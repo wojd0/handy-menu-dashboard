@@ -46,6 +46,8 @@ final class UsageSession {
 
     var isActive: Bool { isAuthenticated && isEnabled }
 
+    var refreshesOnTick: Bool { isEnabled && !(cookieHeader ?? "").isEmpty }
+
     func loadStoredCredential() {
         guard let header = keychain.loadString(key: provider.keychainKey), !header.isEmpty else { return }
         if !ProviderPreferences.hasEnabledChoice(provider, in: preferences) {
