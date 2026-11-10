@@ -19,7 +19,7 @@ struct UsageCardView: View {
                     .foregroundStyle(.red)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(isUnlimited ? "\(UsageMath.infinitySymbol)%" : "\(Int(percentUsed))%")
+                    Text(UsageMath.menuBarPercentFragment(percent: percentUsed, isUnlimited: isUnlimited))
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(isOverLimit ? .red : .primary)

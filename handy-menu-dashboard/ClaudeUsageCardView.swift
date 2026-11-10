@@ -69,7 +69,7 @@ struct ClaudeUsageCardView: View {
 
                 Spacer()
 
-                Text("\(Int(percent))%")
+                Text(UsageMath.menuBarPercentFragment(percent: percent))
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(isOverLimit ? .red : .primary)
