@@ -44,6 +44,11 @@ struct SettingsView: View {
         .onDisappear {
             NSApp.setActivationPolicy(.accessory)
         }
+        .onChange(of: draggedProvider) { _, newValue in
+            if newValue == nil {
+                withAnimation(.easeOut(duration: 0.1)) { dropIndicator = nil }
+            }
+        }
         .onChange(of: launchAtLogin) { _, newValue in
             let previousValue = !newValue
             do {

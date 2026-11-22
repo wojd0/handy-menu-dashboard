@@ -115,13 +115,22 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
 
     private var dragHandle: some View {
         Image(systemName: "line.3.horizontal")
-            .font(.callout)
+            .font(.title3)
             .foregroundStyle(.secondary)
+            .frame(width: 28, height: 28)
             .contentShape(Rectangle())
             .help("Drag to reorder")
             .onDrag {
-                draggedProvider = provider
-                return NSItemProvider(object: provider.rawValue as NSString)
+                let dragged = provider
+                draggedProvider = dragged
+                let binding = $draggedProvider
+                return DragSessionItemProvider(text: dragged.rawValue) {
+                    Task { @MainActor in
+                        if binding.wrappedValue == dragged {
+                            binding.wrappedValue = nil
+                        }
+                    }
+                }
             } preview: {
                 Text(provider.displayName)
                     .padding(.horizontal, 10)
