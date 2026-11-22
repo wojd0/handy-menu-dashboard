@@ -131,7 +131,8 @@ tick; Copilot, ChatGPT and Antigravity **discard** it. This is deliberate and pi
   bar, versus pool rows: Claude's rows are gated on its `has*` flags, Antigravity's rows are grouped by model
   group. Both pool cards use **UsagePoolRow**.
 - **UsageProgressBar** — Gradient progress bar (green→yellow→orange→red).
-- **SettingsView** — Reorderable provider cards plus the General section. Each card is one generic
+- **SettingsView** — Provider cards plus the General section. You can reorder only the connected cards. The
+  unconnected cards come last, with no drag handle and no "Show in menu bar" toggle. Each card is one generic
   `ProviderSettingsCard<Service, Extra>`; the Claude and Antigravity usage pool pickers pass through the `Extra`
   slot. Antigravity shows two segmented pickers under one "Menu Bar Usage Pool" label: pool type, then pool time range.
   The pool type picker sizes its segments to their titles, and each segment shows its title as a tooltip. The card is

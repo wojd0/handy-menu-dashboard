@@ -16,7 +16,9 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                dragHandle
+                if service.isAuthenticated {
+                    dragHandle
+                }
                 Text(provider.displayName)
                     .font(.headline)
                 if isPending {
@@ -26,16 +28,16 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                 }
             }
 
-            HStack {
-                Text("Show in menu bar control")
-                    .font(.callout)
-                Spacer()
-                Toggle("", isOn: $service.isEnabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-            }
-
             if service.isAuthenticated {
+                HStack {
+                    Text("Show in menu bar control")
+                        .font(.callout)
+                    Spacer()
+                    Toggle("", isOn: $service.isEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+
                 extra
 
                 VStack(alignment: .leading, spacing: 6) {

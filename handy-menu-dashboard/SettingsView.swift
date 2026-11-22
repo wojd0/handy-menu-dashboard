@@ -79,7 +79,7 @@ struct SettingsView: View {
 
     private var providerCards: some View {
         VStack(spacing: 16) {
-                ForEach(Provider.ordered(from: providerOrderRaw)) { provider in
+                ForEach(connectedProviders) { provider in
                     section(for: provider)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeights[provider] = $0 }
                         .overlay(alignment: .top) { insertionLine(for: provider, after: false).offset(y: -10) }
@@ -95,6 +95,10 @@ struct SettingsView: View {
                                 onReorder: reorder
                             )
                         )
+                }
+
+                ForEach(unconnectedProviders) { provider in
+                    section(for: provider)
                 }
 
                 if !services.sessionUpdates.pending.isEmpty {
@@ -308,26 +312,6 @@ struct SettingsView: View {
         )
     }
 
-    @ViewBuilder
-    private func insertionLine(for provider: Provider, after: Bool) -> some View {
-        if dropIndicator == DropIndicator(provider: provider, after: after) {
-            Capsule()
-                .fill(Color.accentColor)
-                .frame(height: 3)
-                .padding(.horizontal, 4)
-        }
-    }
-
-    private func reorder(moved: Provider, onto target: Provider, after: Bool) -> Bool {
-        guard moved != target else { return false }
-        var order = Provider.ordered(from: providerOrderRaw)
-        order.removeAll { $0 == moved }
-        guard let targetIndex = order.firstIndex(of: target) else { return false }
-        order.insert(moved, at: after ? targetIndex + 1 : targetIndex)
-        providerOrderRaw = Provider.raw(from: order)
-        return true
-    }
-
     private func signOut(_ provider: Provider) {
         guard signingOutProvider == nil else { return }
         signingOutProvider = provider
@@ -339,6 +323,36 @@ struct SettingsView: View {
             services.sessionUpdates.refreshPending()
             signingOutProvider = nil
         }
+    }
+}
+
+private extension SettingsView {
+    var connectedProviders: [Provider] {
+        Provider.ordered(from: providerOrderRaw).filter { services[$0].isAuthenticated }
+    }
+
+    var unconnectedProviders: [Provider] {
+        Provider.ordered(from: providerOrderRaw).filter { !services[$0].isAuthenticated }
+    }
+
+    @ViewBuilder
+    func insertionLine(for provider: Provider, after: Bool) -> some View {
+        if dropIndicator == DropIndicator(provider: provider, after: after) {
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(height: 3)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    func reorder(moved: Provider, onto target: Provider, after: Bool) -> Bool {
+        guard moved != target else { return false }
+        var order = Provider.ordered(from: providerOrderRaw)
+        order.removeAll { $0 == moved }
+        guard let targetIndex = order.firstIndex(of: target) else { return false }
+        order.insert(moved, at: after ? targetIndex + 1 : targetIndex)
+        providerOrderRaw = Provider.raw(from: order)
+        return true
     }
 }
 
