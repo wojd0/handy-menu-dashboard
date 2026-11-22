@@ -9,6 +9,8 @@ extension UserDefaults: PreferenceStoring {}
 
 enum ProviderPreferences {
     static let claudeUsagePoolKey = "claudeMenuBarBaseline"
+    static let antigravityUsagePoolKey = "antigravityMenuBarUsagePool"
+    static let antigravityPoolRangeKey = "antigravityMenuBarPoolRange"
 
     static func isEnabled(_ provider: Provider, in store: any PreferenceStoring) -> Bool {
         (store.object(forKey: provider.enabledKey) as? Bool) ?? false
@@ -51,5 +53,37 @@ enum ProviderPreferences {
 
     static func setClaudeUsagePool(_ value: ClaudeUsagePool, in store: any PreferenceStoring) {
         store.set(value.rawValue, forKey: claudeUsagePoolKey)
+    }
+
+    static func antigravityUsagePool(in store: any PreferenceStoring) -> AntigravityUsagePool {
+        guard let stored = store.object(forKey: antigravityUsagePoolKey) as? [String: Any],
+              let name = stored["name"] as? String,
+              let windowIDs = stored["windowIDs"] as? [String] else {
+            return .mostUsed
+        }
+        return .group(name: name, windowIDs: windowIDs)
+    }
+
+    static func setAntigravityUsagePool(_ value: AntigravityUsagePool, in store: any PreferenceStoring) {
+        switch value {
+        case .mostUsed:
+            store.set(nil, forKey: antigravityUsagePoolKey)
+        case .group(let name, let windowIDs):
+            store.set(["name": name, "windowIDs": windowIDs], forKey: antigravityUsagePoolKey)
+        }
+    }
+
+    static func antigravityPoolRange(in store: any PreferenceStoring) -> AntigravityPoolRange {
+        guard let period = store.object(forKey: antigravityPoolRangeKey) as? String else { return .mostUsed }
+        return .period(period)
+    }
+
+    static func setAntigravityPoolRange(_ value: AntigravityPoolRange, in store: any PreferenceStoring) {
+        switch value {
+        case .mostUsed:
+            store.set(nil, forKey: antigravityPoolRangeKey)
+        case .period(let period):
+            store.set(period, forKey: antigravityPoolRangeKey)
+        }
     }
 }

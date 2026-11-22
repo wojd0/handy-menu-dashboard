@@ -54,6 +54,17 @@ struct CookieHarvestTests {
         #expect(harvest.sessionCookies(from: [account]) == nil)
     }
 
+    @Test func antigravityNeedsANonEmptyGoogleSAPISIDCookie() {
+        let harvest = Provider.antigravity.harvest
+
+        #expect(harvest.acceptsNavigation(to: url("https://antigravity.google.com/")))
+        #expect(harvest.acceptsNavigation(to: url("https://accounts.google.com/signin")))
+        #expect(harvest.acceptsNavigation(to: url("https://notgoogle.com/")) == false)
+        #expect(harvest.sessionCookies(from: [cookie("SAPISID", domain: ".google.com")]) != nil)
+        #expect(harvest.sessionCookies(from: [cookie("SAPISID", value: "", domain: ".google.com")]) == nil)
+        #expect(harvest.sessionCookies(from: [cookie("NID", domain: ".google.com")]) == nil)
+    }
+
     @Test func cookiesFromOtherDomainsAreNeverHarvested() {
         let harvest = Provider.claude.harvest
         let foreign = cookie("sessionKey", domain: ".example.com")
@@ -69,7 +80,8 @@ struct CookieHarvestTests {
         let lookalikes = [
             (Provider.cursor, cookie("WorkosCursorSessionToken", domain: ".notcursor.com")),
             (Provider.claude, cookie("sessionKey", domain: ".claude.ai.example.com")),
-            (Provider.chatgpt, cookie("_account", domain: ".fakechatgpt.com"))
+            (Provider.chatgpt, cookie("_account", domain: ".fakechatgpt.com")),
+            (Provider.antigravity, cookie("SAPISID", domain: ".google.com.example.com"))
         ]
 
         for (provider, lookalike) in lookalikes {
@@ -85,7 +97,8 @@ struct CookieHarvestTests {
             "https://www.cursor.com/settings",
             "https://github.com/login",
             "https://claude.ai/login",
-            "https://chatgpt.com/"
+            "https://chatgpt.com/",
+            "https://antigravity.google.com/"
         ])
         #expect(Provider.allCases.allSatisfy { $0.harvest.acceptsNavigation(to: $0.harvest.startURL) })
     }

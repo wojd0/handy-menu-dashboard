@@ -86,6 +86,8 @@ struct DashboardView: View {
         switch provider {
         case .claude:
             ClaudeUsageCardView(claudeService: services.claude)
+        case .antigravity:
+            AntigravityUsageCardView(service: services.antigravity)
         case .cursor, .copilot, .chatgpt:
             usageCard(services[provider])
         }

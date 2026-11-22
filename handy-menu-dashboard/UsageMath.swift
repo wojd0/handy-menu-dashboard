@@ -200,3 +200,104 @@ struct ChatGPTUsageResponse: Decodable {
     let effectiveMonthlyLimit: EffectiveMonthlyLimit
     let currentMonthUsage: Double
 }
+
+struct AntigravityQuotaResponse: Decodable {
+    struct Window: Decodable, Equatable {
+        let id: String
+        let label: String?
+        let period: String?
+        let remainingFraction: Double
+        let resetsAt: Date?
+
+        init(from decoder: Decoder) throws {
+            var fields = try decoder.unkeyedContainer()
+            id = try fields.decode(String.self)
+            label = try fields.next(String.self)
+            period = try fields.next(String.self)
+            remainingFraction = try fields.next(Double.self) ?? 0
+            _ = try fields.next(Skipped.self)
+            resetsAt = try fields.next(Timestamp.self)?.date
+        }
+
+        var percentUsed: Double { (1 - remainingFraction) * 100 }
+    }
+
+    struct Group: Decodable, Equatable {
+        let name: String
+        let windows: [Window]
+
+        init(name: String, windows: [Window]) {
+            self.name = name
+            self.windows = windows
+        }
+
+        init(from decoder: Decoder) throws {
+            var fields = try decoder.unkeyedContainer()
+            windows = try fields.next([Window].self) ?? []
+            name = try fields.next(String.self) ?? ""
+        }
+    }
+
+    private struct Envelope: Decodable {
+        let summary: Summary?
+
+        init(from decoder: Decoder) throws {
+            var fields = try decoder.unkeyedContainer()
+            summary = try fields.next(Summary.self)
+        }
+    }
+
+    private struct Summary: Decodable {
+        let groups: [Group]
+
+        init(from decoder: Decoder) throws {
+            var fields = try decoder.unkeyedContainer()
+            _ = try fields.next(Skipped.self)
+            groups = try fields.next([Group].self) ?? []
+        }
+    }
+
+    private struct Timestamp: Decodable {
+        let date: Date
+
+        init(from decoder: Decoder) throws {
+            var fields = try decoder.unkeyedContainer()
+            let seconds = try fields.decode(Int64String.self).value
+            date = Date(timeIntervalSince1970: TimeInterval(seconds))
+        }
+    }
+
+    private struct Int64String: Decodable {
+        let value: Int64
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let number = try? container.decode(Int64.self) {
+                value = number
+                return
+            }
+            guard let number = Int64(try container.decode(String.self)) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Expected an int64 string")
+            }
+            value = number
+        }
+    }
+
+    private struct Skipped: Decodable {
+        init(from decoder: Decoder) throws {}
+    }
+
+    let groups: [Group]
+
+    init(from decoder: Decoder) throws {
+        var fields = try decoder.unkeyedContainer()
+        groups = try fields.next(Envelope.self)?.summary?.groups ?? []
+    }
+}
+
+private extension UnkeyedDecodingContainer {
+    mutating func next<T: Decodable>(_ type: T.Type) throws -> T? {
+        guard !isAtEnd else { return nil }
+        return try decodeIfPresent(type)
+    }
+}

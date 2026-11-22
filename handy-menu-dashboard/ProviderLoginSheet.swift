@@ -14,6 +14,8 @@ struct ProviderLoginSheet: View {
             ClaudeLoginView(claudeService: services.claude)
         case .chatgpt:
             ValidatingLoginView(provider: .chatgpt) { await services.chatgpt.authenticate(with: $0) }
+        case .antigravity:
+            ValidatingLoginView(provider: .antigravity) { await services.antigravity.authenticate(with: $0) }
         }
     }
 }

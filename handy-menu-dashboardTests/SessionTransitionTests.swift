@@ -10,10 +10,10 @@ struct SessionTransitionTests {
         #expect(outcomes.allSatisfy { $0.state.errorMessage == "Session expired. Please sign in again." })
     }
 
-    @Test func onlyCopilotAndChatGPTDiscardTheCredentialOnAuthExpiry() {
+    @Test func onlyValidatingProvidersDiscardTheCredentialOnAuthExpiry() {
         let discarding = Provider.allCases.filter { outcome(for: .authExpired, provider: $0).discardsCredential }
 
-        #expect(discarding == [.copilot, .chatgpt])
+        #expect(discarding == [.copilot, .chatgpt, .antigravity])
     }
 
     @Test func httpFailureNamesTheProvider() {
@@ -23,7 +23,8 @@ struct SessionTransitionTests {
             "Cursor returned status 503",
             "GitHub returned status 503",
             "Claude returned status 503",
-            "ChatGPT returned status 503"
+            "ChatGPT returned status 503",
+            "Antigravity returned status 503"
         ])
     }
 
@@ -34,7 +35,8 @@ struct SessionTransitionTests {
             "Unable to connect to Cursor",
             "Unable to connect to GitHub",
             "Unable to connect to Claude",
-            "Unable to connect to ChatGPT"
+            "Unable to connect to ChatGPT",
+            "Unable to connect to Antigravity"
         ])
     }
 
@@ -45,7 +47,8 @@ struct SessionTransitionTests {
             "Invalid response from Cursor",
             "Invalid response from GitHub",
             "Invalid response from Claude",
-            "Invalid response from ChatGPT"
+            "Invalid response from ChatGPT",
+            "Invalid response from Antigravity"
         ])
     }
 

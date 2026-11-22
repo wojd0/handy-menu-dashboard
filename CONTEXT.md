@@ -6,7 +6,7 @@ terms exactly.
 ## Domain
 
 **Provider** — one coding-agent account whose usage the app tracks: Cursor, GitHub Copilot,
-Claude, ChatGPT. Modelled as an enum. It is a value: `Codable` + `Transferable`
+Claude, ChatGPT, Antigravity. Modelled as an enum. It is a value: `Codable` + `Transferable`
 (the drag payload for reordering), `Hashable` (the `cardHeights` key), and the `ForEach`
 identity in the dashboard and settings. It carries per-provider facts, never behaviour.
 
@@ -20,8 +20,27 @@ two subscription windows, **session** (`five_hour`) and **weekly** (`seven_day`)
 percent only, with a reset time. The credit pool key is obfuscated and changes (`cinder_cove`,
 `iguana_necktie`). The decoder takes `cinder_cove` first, then the first other object that has `limit_dollars`.
 
-**Usage pool** — which Claude pool the menu bar reports: General, Credit, Combined, Session or
-Weekly. Claude-only; no other provider has one. Settings lists only the usage pools that have data.
+**Quota group** — one Antigravity model group, such as "Gemini Models" or "Claude and GPT models". Each group
+has a 5-hour window and a weekly window. Google reports each window as a remaining fraction with a reset time.
+If the fraction is absent, the window is used up. Antigravity has no monetary unit, so Settings offers only
+% used and % remaining.
+
+**Antigravity usage pool** — two choices: the pool type and the pool time range. The lists are not fixed: each
+refresh builds them from the payload.
+
+- The **pool type** is Most Used or one quota group. Most Used takes the windows of all groups. The saved choice
+  keeps the group name and its window IDs. A group matches it if one window ID is the same, else if the name is
+  the same. If no group matches, the menu bar uses Most Used. This is `resolvedUsagePool`.
+- The **pool time range** is Most Used or one window period, such as `5h` or `weekly`. Settings lists only the
+  periods of the resolved pool type. If that pool type does not report the saved period, the menu bar uses Most
+  Used. This is `resolvedPoolRange`.
+
+The menu bar shows the window with the highest percent used in the pool type and the time range. A fallback does
+not change the saved choice.
+
+**Usage pool** — which pool the menu bar reports. Only Claude and Antigravity have one.
+Claude's usage pools are General, Credit, Combined, Session or
+Weekly. Settings lists only the usage pools that have data.
 Combined needs both spend and credit. If the chosen pool has no data, the menu bar uses the first
 available pool in this order: Session, Weekly, General, Credit. The saved choice does not change.
 This is `resolvedUsagePool`.
@@ -73,9 +92,9 @@ TCC blocked the read, so the manual clipboard fallback is offered), or `failed`.
 host, which path, which cookie names. Per provider, expressed as data.
 
 **Credential policy** — two orthogonal per-provider facts, deliberately not one flag:
-`clearsCredentialOnAuthExpiry` (Copilot and ChatGPT discard on 401/403; Cursor and Claude retain,
+`clearsCredentialOnAuthExpiry` (Copilot, ChatGPT and Antigravity discard on 401/403; Cursor and Claude retain,
 so a transient Cloudflare 403 self-heals on the next refresh) and whether it validates before persisting
-(Copilot and ChatGPT prove the session works before writing to the Keychain; Cursor and Claude
+(Copilot, ChatGPT and Antigravity prove the session works before writing to the Keychain; Cursor and Claude
 currently do not).
 
 ## Modules
@@ -100,7 +119,7 @@ policy is data, not a branch.
 classification as pure values, behind one transport seam with two adapters: `URLSession` in
 production, a closure in tests.
 
-**CookieHarvest** — the four harvest rules as testable data, lifted out of the
+**CookieHarvest** — the five harvest rules as testable data, lifted out of the
 `WKNavigationDelegate` callbacks no test can reach.
 
 **LoginFlow** — the reentrancy guard, retry latch and clear-then-reload recovery, lifted out of
@@ -110,7 +129,7 @@ the WebView Coordinator. Its side effects are installed by the Coordinator, not 
 Generic over the concrete service type, because `@Bindable` needs `AnyObject & Observable` and
 existentials do not self-conform.
 
-**ServiceSet** — holds the four services and refreshes them together. Not observable; views track
+**ServiceSet** — holds the five services and refreshes them together. Not observable; views track
 the individual services they read.
 
 ## Vocabulary

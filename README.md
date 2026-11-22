@@ -11,6 +11,7 @@ A macOS menu bar app that tracks coding-agent usage at a glance.
 - **Claude** — Claude.ai usage across five pools: the 5-hour session and weekly windows, usage limit (General), credit and Combined. Pick a usage pool from the pools your plan has and dollars, % used, or % remaining.
 - **ChatGPT** — Monthly credit usage against the effective spend-control limit for the currently selected ChatGPT account.
 - **GitHub Copilot** — Current credit usage against the quota reported by your Copilot plan.
+- **Antigravity** — Google Antigravity 5-hour and weekly quota for each model group. Pick a pool type (Most Used, or one model group your plan reports) and a time range (Most Used, or a period such as Weekly or Session (5h)). The menu bar shows the most used window that matches both, as % used or % remaining.
 - **Menu bar summary** — Compact per-service labels; drag to reorder and show monetary units, % used, or % remaining per service.
 - **Secure & sandboxed** — Session cookies live in the macOS Keychain; outbound network only.
 
@@ -43,7 +44,9 @@ Choose **Approve and Auto-Renew** when importing browser cookies, or check **Aut
 - **Cursor / Claude / ChatGPT** — Sign in via the embedded WebView; cookies are saved to Keychain. Claude also lets you pick a usage pool from the pools your plan has. ChatGPT tracks the account selected during sign-in and can show credits, % used, or % remaining in the menu bar.
 - **GitHub Copilot** — Sign in through the embedded GitHub browser to fetch your used, total, and remaining credits automatically.
 
-The Copilot integration uses GitHub's undocumented web entitlement endpoint. GitHub may change this endpoint or its response without notice.
+- **Antigravity** — Update the session from your browser while you are signed in to Google, or sign in through the embedded Google page. The app saves your `google.com` session cookies to Keychain and validates them before it saves them.
+
+The Copilot integration uses GitHub's undocumented web entitlement endpoint. GitHub may change this endpoint or its response without notice. The Antigravity integration uses the internal quota endpoint of the Antigravity web app. Google may change it without notice.
 
 ## Security
 

@@ -5,6 +5,7 @@ struct FullWidthSegmentedPicker<Value: Hashable>: NSViewRepresentable {
     let label: String
     @Binding var selection: Value
     let options: [(title: String, value: Value)]
+    var distribution: NSSegmentedControl.Distribution = .fillEqually
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -14,7 +15,6 @@ struct FullWidthSegmentedPicker<Value: Hashable>: NSViewRepresentable {
         let control = NSSegmentedControl()
         control.segmentStyle = .automatic
         control.trackingMode = .selectOne
-        control.segmentDistribution = .fillEqually
         control.setContentHuggingPriority(.defaultLow, for: .horizontal)
         control.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         control.target = context.coordinator
@@ -25,11 +25,13 @@ struct FullWidthSegmentedPicker<Value: Hashable>: NSViewRepresentable {
     func updateNSView(_ control: NSSegmentedControl, context: Context) {
         context.coordinator.parent = self
         control.setAccessibilityLabel(label)
+        control.segmentDistribution = distribution
         if control.segmentCount != options.count {
             control.segmentCount = options.count
         }
         for (index, option) in options.enumerated() where control.label(forSegment: index) != option.title {
             control.setLabel(option.title, forSegment: index)
+            control.setToolTip(option.title, forSegment: index)
         }
         if let index = options.firstIndex(where: { $0.value == selection }) {
             control.selectedSegment = index

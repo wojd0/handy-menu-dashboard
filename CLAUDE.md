@@ -29,8 +29,8 @@ Menu bar app using `MenuBarExtra` with `.window` style showing coding agent usag
 
 ### Data Flow
 
-The four `@Observable` services (`CursorService`, `CopilotService`, `ClaudeService`, `ChatGPTService`) are
-held in a `ServiceSet` created as `@State` in the `App` struct and passed as one parameter to views — not via
+The five `@Observable` services (`CursorService`, `CopilotService`, `ClaudeService`, `ChatGPTService`,
+`AntigravityService`) are held in a `ServiceSet` created as `@State` in the `App` struct and passed as one parameter to views — not via
 `@Environment`. Each service is a thin shell: it decodes its provider's payload and applies it. Everything
 shared sits behind modules the shell depends on.
 
@@ -58,11 +58,11 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
 - **`UsageReading` / `AmountStyle` / `DetailStyle`** — The single definition of percent, over-limit, the
   menu-bar fragment and the dashboard detail string. Always dollars or credits, never cents.
 - **`UsageMath`** — Leaf formatting and generic percent maths only. It must not learn provider names again;
-  it still holds the four `Decodable` response structs.
+  it still holds the five `Decodable` response structs.
 - **`ProviderPreferences`** — The only owner of the `<provider>Enabled` and `<provider>MenuBarShowPercent`
   keys, derived from `Provider.rawValue`. `ProviderPreferencesTests` pins the derived strings against the
   literals that shipped — a one-character drift would silently reset every user's saved settings.
-- **`CookieHarvest`** — The four sign-in harvest rules as testable data: start URL, path gate, domain match,
+- **`CookieHarvest`** — The five sign-in harvest rules as testable data: start URL, path gate, domain match,
   session-cookie rule, website-data domains.
 - **`LoginFlow`** — The reentrancy guard, retry latch and clear-then-reload recovery, lifted out of the
   WebView coordinator. Its side effects are installed by the coordinator in `makeNSView`, not injected at init.
@@ -103,9 +103,21 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   a pool that leaves the payload clears. `resolvedUsagePool` falls back to session, then weekly, when the chosen pool is empty.
 - **ChatGPTService** — Fetches monthly credits from the account's spend-control endpoint. Refreshes the bearer
   token through the session endpoint and verifies its account claim against the `_account` cookie.
+- **AntigravityService** — Fetches the Google Antigravity quota through a `POST` to
+  `JetskiRemoteAgentProxyService/GetUserQuotaSummary` on `aicode.clients6.google.com`. The body is
+  `application/json+protobuf`: positional arrays, not keyed objects. `AntigravityQuotaResponse` decodes them.
+  Each model group has a 5-hour window and a weekly window, as a remaining fraction with a reset time.
+  `applyQuota` puts the session window first, then the weekly window, as Claude does.
+  Each refresh builds two lists from the payload: the pool types (Most Used plus one for each group) and the pool
+  time ranges (Most Used plus each window period of the resolved pool type). The menu bar shows the window with
+  the highest percent used in both. `resolvedUsagePool` matches the saved group by window ID, then by name;
+  `resolvedPoolRange` needs the saved period in the pool type. Both fall back to Most Used.
+  `GoogleSessionAuthorization` signs each request
+  with `SAPISIDHASH`: the SHA-1 of the timestamp, the `SAPISID` cookie and the `antigravity.google.com` origin.
+  The session keeps only the `google.com` cookies that a browser sends to the quota host.
 
 Cursor and Claude **retain** their stored cookie through a 401/403 so a transient block self-heals on the next
-tick; Copilot and ChatGPT **discard** it. This is deliberate and pinned by `SessionTransitionTests` — see
+tick; Copilot, ChatGPT and Antigravity **discard** it. This is deliberate and pinned by `SessionTransitionTests` — see
 `Provider.clearsCredentialOnAuthExpiry`.
 
 ### Views
@@ -115,15 +127,18 @@ tick; Copilot and ChatGPT **discard** it. This is deliberate and pinned by `Sess
   through `ImageRenderer` — it reads `menuBarText` and `sessionUpdates.pending` (for the trailing
   warning icon), never `isLoading`, or every 3-minute refresh re-renders the whole image.
 - **DashboardView** — Popover with a usage card per active provider, settings gear and quit button.
-- **UsageCardView** / **ClaudeUsageCardView** — Two deliberately different shapes: one headline percentage
-  plus a bar, versus Claude's two pool rows gated on `hasSpend`/`hasCredit`.
+- **UsageCardView** / **ClaudeUsageCardView** / **AntigravityUsageCardView** — One headline percentage plus a
+  bar, versus pool rows: Claude's rows are gated on its `has*` flags, Antigravity's rows are grouped by model
+  group. Both pool cards use **UsagePoolRow**.
 - **UsageProgressBar** — Gradient progress bar (green→yellow→orange→red).
 - **SettingsView** — Reorderable provider cards plus the General section. Each card is one generic
-  `ProviderSettingsCard<Service, Extra>`; Claude's usage pool picker passes through the `Extra` slot. The card is
+  `ProviderSettingsCard<Service, Extra>`; the Claude and Antigravity usage pool pickers pass through the `Extra`
+  slot. Antigravity shows two segmented pickers under one "Menu Bar Usage Pool" label: pool type, then pool time range.
+  The pool type picker sizes its segments to their titles, and each segment shows its title as a tooltip. The card is
   **generic, not existential** — `@Bindable var service: any UsageDisplaying` does not compile.
 - **CursorLoginView** / **ClaudeLoginView** — Simple `WKWebView` sheets that harvest cookies and persist them
   without validating. Both use `Provider.harvest`; Claude's rule gates on host only, not on leaving `/login`.
-- **ValidatingLoginView** / **ValidatingWebView** — One login sheet serving Copilot and ChatGPT: validates the
+- **ValidatingLoginView** / **ValidatingWebView** — One login sheet serving Copilot, ChatGPT and Antigravity: validates the
   session before persisting, with an error banner, retry, and clear-then-reload recovery.
 
 **No test in the target touches `SettingsView`, `ProviderSettingsCard` or `ProviderDropDelegate`.** Changes to

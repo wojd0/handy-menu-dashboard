@@ -30,7 +30,7 @@ struct SessionUpdateCoordinatorTests {
         harness.coordinator.refreshPending()
 
         #expect(harness.reader.callCount == 0)
-        #expect(harness.coordinator.pending == [.cursor, .copilot, .claude, .chatgpt])
+        #expect(harness.coordinator.pending == [.cursor, .copilot, .claude, .chatgpt, .antigravity])
     }
 
     @Test func approveAdoptsCursorFromTheBrowserSession() async {
@@ -135,11 +135,11 @@ struct SessionUpdateCoordinatorTests {
 
         harness.coordinator.skip()
 
-        #expect(harness.coordinator.pending == [.cursor, .copilot, .claude, .chatgpt])
+        #expect(harness.coordinator.pending == [.cursor, .copilot, .claude, .chatgpt, .antigravity])
     }
 
     @Test func aNewlyPendingProviderIsNotifiedExactlyOnce() async {
-        let harness = setupTest(Config(preauthenticated: [.cursor, .copilot, .claude, .chatgpt]))
+        let harness = setupTest(Config(preauthenticated: [.cursor, .copilot, .claude, .chatgpt, .antigravity]))
 
         harness.services.cursor.isAuthenticated = false
         harness.coordinator.refreshPending()

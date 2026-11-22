@@ -188,6 +188,8 @@ struct SettingsView: View {
             claudeCard()
         case .chatgpt:
             card(services.chatgpt)
+        case .antigravity:
+            antigravityCard()
         }
     }
 
@@ -247,6 +249,54 @@ struct SettingsView: View {
                             ),
                             options: usagePools.map { ($0.label, $0) }
                         )
+                    }
+                }
+            }
+        )
+    }
+
+    private func antigravityCard() -> some View {
+        let antigravity = services.antigravity
+        let usagePools = antigravity.availableUsagePools
+        let poolRanges = antigravity.availablePoolRanges
+
+        return ProviderSettingsCard(
+            service: antigravity,
+            draggedProvider: $draggedProvider,
+            autoRenew: autoRenewBinding(for: antigravity.provider),
+            automaticallyUpdates: services.sessionUpdates.automaticallyUpdates,
+            signingOutProvider: signingOutProvider,
+            isPending: isPending(antigravity.provider),
+            browserName: browserName,
+            onSignIn: { loginProvider = .antigravity },
+            onSignOut: { signOut(antigravity.provider) },
+            onUpdateFromBrowser: { updateFromBrowser(.antigravity) },
+            extra: {
+                if usagePools.count > 2 || poolRanges.count > 2 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Menu Bar Usage Pool")
+                            .font(.callout)
+                        if usagePools.count > 2 {
+                            FullWidthSegmentedPicker(
+                                label: "Usage Pool Type",
+                                selection: Binding(
+                                    get: { antigravity.resolvedUsagePool },
+                                    set: { antigravity.usagePool = $0 }
+                                ),
+                                options: usagePools.map { ($0.label, $0) },
+                                distribution: .fillProportionally
+                            )
+                        }
+                        if poolRanges.count > 2 {
+                            FullWidthSegmentedPicker(
+                                label: "Usage Pool Time Range",
+                                selection: Binding(
+                                    get: { antigravity.resolvedPoolRange },
+                                    set: { antigravity.poolRange = $0 }
+                                ),
+                                options: poolRanges.map { ($0.label, $0) }
+                            )
+                        }
                     }
                 }
             }

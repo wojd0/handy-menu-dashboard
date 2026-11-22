@@ -13,7 +13,7 @@ struct ClaudeUsageCardView: View {
                     .foregroundStyle(.red)
             } else {
                 if claudeService.hasSession {
-                    poolRow(
+                    UsagePoolRow(
                         title: "Session (5h)",
                         percent: claudeService.sessionPercent,
                         resetsAt: claudeService.sessionResetsAt
@@ -21,7 +21,7 @@ struct ClaudeUsageCardView: View {
                 }
 
                 if claudeService.hasWeekly {
-                    poolRow(
+                    UsagePoolRow(
                         title: "Weekly",
                         percent: claudeService.weeklyPercent,
                         resetsAt: claudeService.weeklyResetsAt
@@ -29,7 +29,7 @@ struct ClaudeUsageCardView: View {
                 }
 
                 if claudeService.hasSpend {
-                    poolRow(
+                    UsagePoolRow(
                         title: "General",
                         percent: UsageMath.percentUsed(
                             used: claudeService.spendUsedDollars,
@@ -40,7 +40,7 @@ struct ClaudeUsageCardView: View {
                 }
 
                 if claudeService.hasCredit {
-                    poolRow(
+                    UsagePoolRow(
                         title: "Credit",
                         percent: UsageMath.percentUsed(
                             used: claudeService.creditUsedDollars,
@@ -50,44 +50,6 @@ struct ClaudeUsageCardView: View {
                     )
                 }
             }
-        }
-    }
-
-    private func poolRow(
-        title: String,
-        percent: Double,
-        detail: String? = nil,
-        resetsAt: Date? = nil
-    ) -> some View {
-        let isOverLimit = UsageMath.isOverLimit(percentUsed: percent)
-
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(title)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Text(UsageMath.menuBarPercentFragment(percent: percent))
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(isOverLimit ? .red : .primary)
-            }
-
-            if let detail {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.primary)
-            }
-
-            if let resetsAt {
-                Text(UsageMath.resetText(for: resetsAt))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            UsageProgressBar(percentage: percent, isOverLimit: isOverLimit)
         }
     }
 }

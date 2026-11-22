@@ -43,12 +43,8 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
                         .font(.callout)
                     FullWidthSegmentedPicker(
                         label: "Menu Bar Unit",
-                        selection: $service.menuBarDisplayMode,
-                        options: [
-                            (provider.monetaryLabel, .monetary),
-                            ("% Used", .percentUsed),
-                            ("% Remaining", .percentRemaining)
-                        ]
+                        selection: displayModeSelection,
+                        options: displayModeOptions
                     )
                 }
 
@@ -75,6 +71,25 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
     }
 
     private var provider: Provider { service.provider }
+
+    private var displayModeOptions: [(title: String, value: MenuBarDisplayMode)] {
+        let percentOptions: [(title: String, value: MenuBarDisplayMode)] = [
+            ("% Used", .percentUsed),
+            ("% Remaining", .percentRemaining)
+        ]
+        guard let monetaryLabel = provider.monetaryLabel else { return percentOptions }
+        return [(monetaryLabel, .monetary)] + percentOptions
+    }
+
+    private var displayModeSelection: Binding<MenuBarDisplayMode> {
+        Binding(
+            get: {
+                let mode = service.menuBarDisplayMode
+                return mode == .monetary && provider.monetaryLabel == nil ? .percentUsed : mode
+            },
+            set: { service.menuBarDisplayMode = $0 }
+        )
+    }
 
     @ViewBuilder
     private var autoRenewCheckbox: some View {

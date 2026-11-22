@@ -41,6 +41,8 @@ struct UsageRequest: Equatable {
     var url: String
     var cookieHeader: String
     var headers: [String: String] = [:]
+    var method = "GET"
+    var body: Data?
 
     func urlRequest() throws(UsageFailure.Kind) -> URLRequest {
         guard let requestURL = URL(string: url) else {
@@ -48,7 +50,8 @@ struct UsageRequest: Equatable {
         }
 
         var request = URLRequest(url: requestURL)
-        request.httpMethod = "GET"
+        request.httpMethod = method
+        request.httpBody = body
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
         request.setValue(BrowserIdentity.userAgent, forHTTPHeaderField: "User-Agent")
         for (name, value) in headers {

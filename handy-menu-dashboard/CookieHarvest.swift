@@ -108,6 +108,14 @@ extension Provider {
                 sessionRule: .prefixedAndNamed(prefix: "__Secure-next-auth.session-token", required: "_account"),
                 websiteDataDomains: ["chatgpt.com", "openai.com"]
             )
+        case .antigravity:
+            CookieHarvest(
+                startURL: URL(string: "https://antigravity.google.com/")!,
+                requiredPathFragments: [],
+                domainMatch: .exactOrSuffix("google.com"),
+                sessionRule: .anyNamed(["SAPISID"], requireNonEmptyValue: true),
+                websiteDataDomains: ["google.com"]
+            )
         }
     }
 }

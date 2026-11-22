@@ -5,6 +5,7 @@ struct ServiceSet {
     var copilot: CopilotService
     var claude: ClaudeService
     var chatgpt: ChatGPTService
+    var antigravity: AntigravityService
     var sessionUpdates: SessionUpdateCoordinator
 
     init(
@@ -40,10 +41,17 @@ struct ServiceSet {
             autoRefresh: autoRefresh,
             preferences: preferences
         )
+        let antigravity = AntigravityService(
+            keychain: keychain,
+            dataLoader: dataLoader,
+            autoRefresh: autoRefresh,
+            preferences: preferences
+        )
         self.cursor = cursor
         self.copilot = copilot
         self.claude = claude
         self.chatgpt = chatgpt
+        self.antigravity = antigravity
 
         sessionUpdates = SessionUpdateCoordinator(
             resolve: { provider in
@@ -52,6 +60,7 @@ struct ServiceSet {
                 case .copilot: copilot
                 case .claude: claude
                 case .chatgpt: chatgpt
+                case .antigravity: antigravity
                 }
             },
             reader: browserReader,
@@ -67,6 +76,7 @@ struct ServiceSet {
         case .copilot: copilot
         case .claude: claude
         case .chatgpt: chatgpt
+        case .antigravity: antigravity
         }
     }
 
@@ -76,6 +86,7 @@ struct ServiceSet {
             group.addTask { await copilot.refresh() }
             group.addTask { await claude.refresh() }
             group.addTask { await chatgpt.refresh() }
+            group.addTask { await antigravity.refresh() }
         }
     }
 }

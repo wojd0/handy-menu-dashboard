@@ -8,6 +8,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
     case copilot
     case claude
     case chatgpt
+    case antigravity
 
     var id: String { rawValue }
 
@@ -21,6 +22,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: "GitHub Copilot"
         case .claude: "Claude"
         case .chatgpt: "ChatGPT"
+        case .antigravity: "Antigravity"
         }
     }
 
@@ -30,6 +32,7 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: "chevron.left.forwardslash.chevron.right"
         case .claude: "sparkle"
         case .chatgpt: "bubble.left.and.bubble.right"
+        case .antigravity: "arrow.up.circle"
         }
     }
 
@@ -43,13 +46,15 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: .copilotCookies
         case .claude: .claudeCookies
         case .chatgpt: .chatGPTCookies
+        case .antigravity: .antigravityCookies
         }
     }
 
-    var monetaryLabel: String {
+    var monetaryLabel: String? {
         switch self {
         case .cursor, .claude: "Dollars"
         case .copilot, .chatgpt: "Credits"
+        case .antigravity: nil
         }
     }
 
@@ -61,19 +66,20 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: "GitHub"
         case .claude: "Claude"
         case .chatgpt: "ChatGPT"
+        case .antigravity: "Antigravity"
         }
     }
 
     var clearsCredentialOnAuthExpiry: Bool {
         switch self {
         case .cursor, .claude: false
-        case .copilot, .chatgpt: true
+        case .copilot, .chatgpt, .antigravity: true
         }
     }
 
     var accentNeedsOutline: Bool {
         switch self {
-        case .cursor, .copilot, .claude: false
+        case .cursor, .copilot, .claude, .antigravity: false
         case .chatgpt: true
         }
     }
@@ -84,11 +90,12 @@ enum Provider: String, CaseIterable, Identifiable, Codable, Transferable {
         case .copilot: .blue
         case .claude: .orange
         case .chatgpt: .white
+        case .antigravity: .cyan
         }
     }
 
     static let orderStorageKey = "providerOrder"
-    static let defaultOrderRaw = "cursor,copilot,claude,chatgpt"
+    static let defaultOrderRaw = "cursor,copilot,claude,chatgpt,antigravity"
 
     static func ordered(from raw: String) -> [Provider] {
         let stored = raw.split(separator: ",").compactMap { Provider(rawValue: String($0)) }

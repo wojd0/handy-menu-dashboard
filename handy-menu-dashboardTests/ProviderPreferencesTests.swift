@@ -7,7 +7,13 @@ struct ProviderPreferencesTests {
     @Test func enabledKeysMatchTheKeysShippedBeforeTheyWereDerived() {
         let keys = Provider.allCases.map(\.enabledKey)
 
-        #expect(keys == ["cursorEnabled", "copilotEnabled", "claudeEnabled", "chatgptEnabled"])
+        #expect(keys == [
+            "cursorEnabled",
+            "copilotEnabled",
+            "claudeEnabled",
+            "chatgptEnabled",
+            "antigravityEnabled"
+        ])
     }
 
     @Test func displayModeKeysMatchTheKeysShippedBeforeTheyWereDerived() {
@@ -17,12 +23,43 @@ struct ProviderPreferencesTests {
             "cursorMenuBarShowPercent",
             "copilotMenuBarShowPercent",
             "claudeMenuBarShowPercent",
-            "chatgptMenuBarShowPercent"
+            "chatgptMenuBarShowPercent",
+            "antigravityMenuBarShowPercent"
         ])
     }
 
     @Test func claudeUsagePoolKeyIsUnchanged() {
         #expect(ProviderPreferences.claudeUsagePoolKey == "claudeMenuBarBaseline")
+    }
+
+    @Test func antigravityUsagePoolKeyIsUnchanged() {
+        #expect(ProviderPreferences.antigravityUsagePoolKey == "antigravityMenuBarUsagePool")
+        #expect(ProviderPreferences.antigravityPoolRangeKey == "antigravityMenuBarPoolRange")
+    }
+
+    @Test func antigravityPoolRangeRoundTripsAndDefaultsToMostUsed() {
+        let store = InMemoryPreferenceStore()
+
+        #expect(ProviderPreferences.antigravityPoolRange(in: store) == .mostUsed)
+
+        ProviderPreferences.setAntigravityPoolRange(.period("weekly"), in: store)
+        #expect(ProviderPreferences.antigravityPoolRange(in: store) == .period("weekly"))
+
+        ProviderPreferences.setAntigravityPoolRange(.mostUsed, in: store)
+        #expect(ProviderPreferences.antigravityPoolRange(in: store) == .mostUsed)
+    }
+
+    @Test func antigravityUsagePoolRoundTripsAndDefaultsToMostUsed() {
+        let store = InMemoryPreferenceStore()
+        let argon = AntigravityUsagePool.group(name: "Gemini 4 Argon", windowIDs: ["gemini-argon-wtu-weekly"])
+
+        #expect(ProviderPreferences.antigravityUsagePool(in: store) == .mostUsed)
+
+        ProviderPreferences.setAntigravityUsagePool(argon, in: store)
+        #expect(ProviderPreferences.antigravityUsagePool(in: store) == argon)
+
+        ProviderPreferences.setAntigravityUsagePool(.mostUsed, in: store)
+        #expect(ProviderPreferences.antigravityUsagePool(in: store) == .mostUsed)
     }
 
     @Test func providersAreDisabledUntilTurnedOn() {
