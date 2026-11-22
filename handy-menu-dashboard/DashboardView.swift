@@ -74,7 +74,7 @@ struct DashboardView: View {
     }
 
     private func isActive(_ provider: Provider) -> Bool {
-        services[provider].isActive
+        services[provider].isActive && services[provider].showsAnyUsageBar
     }
 
     private var isRefreshing: Bool {

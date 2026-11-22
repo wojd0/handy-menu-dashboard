@@ -43,6 +43,14 @@ enum ProviderPreferences {
         store.set(value.rawValue, forKey: provider.displayModeKey)
     }
 
+    static func hiddenUsageBars(for provider: Provider, in store: any PreferenceStoring) -> Set<String> {
+        Set((store.object(forKey: provider.hiddenUsageBarsKey) as? [String]) ?? [])
+    }
+
+    static func setHiddenUsageBars(_ value: Set<String>, for provider: Provider, in store: any PreferenceStoring) {
+        store.set(value.isEmpty ? nil : value.sorted(), forKey: provider.hiddenUsageBarsKey)
+    }
+
     static func claudeUsagePool(in store: any PreferenceStoring) -> ClaudeUsagePool {
         guard let rawValue = store.object(forKey: claudeUsagePoolKey) as? String,
               let usagePool = ClaudeUsagePool(rawValue: rawValue) else {

@@ -242,6 +242,21 @@ struct AntigravityUsageTests {
         #expect(service.groups.first?.windows.map(\.title) == ["Session (5h)", "Weekly"])
     }
 
+    @Test func everyWindowIsAUsageBarUnderItsGroup() async {
+        let service = makeService(cookies: cookies) { try httpResponse(for: $0, data: Data(Self.quotaSummary.utf8)) }
+
+        await service.refresh()
+
+        #expect(service.usageBars.prefix(2) == [
+            UsageBar(id: "gemini-5h", title: "Session (5h)", section: "Gemini Models"),
+            UsageBar(id: "gemini-weekly", title: "Weekly", section: "Gemini Models")
+        ])
+        #expect(service.usageBars.count == 5)
+
+        service.hiddenUsageBars = Set(service.usageBars.map(\.id))
+        #expect(service.showsAnyUsageBar == false)
+    }
+
     @Test func browserCookiesAreValidatedBeforeTheyArePersisted() async {
         let keychain = InMemoryKeychainStore()
         let service = AntigravityService(

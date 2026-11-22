@@ -104,9 +104,12 @@ dashboard detail string. A plain value type. Formatting varies along two indepen
 axes: **AmountStyle** (menu bar) and **DetailStyle** (dashboard). They are not diagonal — Cursor
 and Claude share an amount style but not a detail style.
 
+**UsageBar** — one usage row with a progress bar in the popover: a Claude pool, an Antigravity window, or
+the single bar of Cursor, Copilot and ChatGPT. The user can hide each bar in Settings. All bars show by default.
+
 **UsageSession** — owns the refresh envelope (`run(load:apply:unexpected:)`: the cookie preamble, the
-loading flag, the staleness guard, the catch) and the credential lifecycle. Owns the enabled flag
-and display mode via **ProviderPreferences**. Does *not* own the refresh loop — that would form a
+loading flag, the staleness guard, the catch) and the credential lifecycle. Owns the enabled flag,
+display mode and hidden usage bars via **ProviderPreferences**. Does *not* own the refresh loop — that would form a
 retain cycle a `@MainActor deinit` cannot break.
 
 **RefreshLoop** — the 180-second loop and its cancellation. Deliberately **not** `@Observable`:

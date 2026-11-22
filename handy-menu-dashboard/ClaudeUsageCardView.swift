@@ -12,7 +12,7 @@ struct ClaudeUsageCardView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             } else {
-                if claudeService.hasSession {
+                if claudeService.hasSession && claudeService.showsUsageBar(ClaudeUsagePool.session.rawValue) {
                     UsagePoolRow(
                         title: "Session (5h)",
                         percent: claudeService.sessionPercent,
@@ -20,7 +20,7 @@ struct ClaudeUsageCardView: View {
                     )
                 }
 
-                if claudeService.hasWeekly {
+                if claudeService.hasWeekly && claudeService.showsUsageBar(ClaudeUsagePool.weekly.rawValue) {
                     UsagePoolRow(
                         title: "Weekly",
                         percent: claudeService.weeklyPercent,
@@ -28,7 +28,7 @@ struct ClaudeUsageCardView: View {
                     )
                 }
 
-                if claudeService.hasSpend {
+                if claudeService.hasSpend && claudeService.showsUsageBar(ClaudeUsagePool.usageLimit.rawValue) {
                     UsagePoolRow(
                         title: "General",
                         percent: UsageMath.percentUsed(
@@ -39,7 +39,7 @@ struct ClaudeUsageCardView: View {
                     )
                 }
 
-                if claudeService.hasCredit {
+                if claudeService.hasCredit && claudeService.showsUsageBar(ClaudeUsagePool.credit.rawValue) {
                     UsagePoolRow(
                         title: "Credit",
                         percent: UsageMath.percentUsed(

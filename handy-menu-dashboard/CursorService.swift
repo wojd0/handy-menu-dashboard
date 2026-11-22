@@ -16,6 +16,11 @@ final class CursorService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
+    var hiddenUsageBars: Set<String> {
+        get { session.hiddenUsageBars }
+        set { session.hiddenUsageBars = newValue }
+    }
+
     var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
     var spendCents: Int = 0
     var monthlyLimitDollars: Int = 0

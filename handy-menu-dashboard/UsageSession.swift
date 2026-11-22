@@ -15,6 +15,7 @@ final class UsageSession {
 
     private var storedEnabled: Bool
     private var storedDisplayMode: MenuBarDisplayMode
+    private var storedHiddenUsageBars: Set<String>
 
     init(
         provider: Provider,
@@ -26,6 +27,7 @@ final class UsageSession {
         self.preferences = preferences
         storedEnabled = ProviderPreferences.isEnabled(provider, in: preferences)
         storedDisplayMode = ProviderPreferences.displayMode(for: provider, in: preferences)
+        storedHiddenUsageBars = ProviderPreferences.hiddenUsageBars(for: provider, in: preferences)
     }
 
     var isEnabled: Bool {
@@ -41,6 +43,14 @@ final class UsageSession {
         set {
             storedDisplayMode = newValue
             ProviderPreferences.setDisplayMode(newValue, for: provider, in: preferences)
+        }
+    }
+
+    var hiddenUsageBars: Set<String> {
+        get { storedHiddenUsageBars }
+        set {
+            storedHiddenUsageBars = newValue
+            ProviderPreferences.setHiddenUsageBars(newValue, for: provider, in: preferences)
         }
     }
 

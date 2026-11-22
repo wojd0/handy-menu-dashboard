@@ -15,6 +15,11 @@ final class ChatGPTService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
+    var hiddenUsageBars: Set<String> {
+        get { session.hiddenUsageBars }
+        set { session.hiddenUsageBars = newValue }
+    }
+
     var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
 
     var currentMonthUsage: Double = 0

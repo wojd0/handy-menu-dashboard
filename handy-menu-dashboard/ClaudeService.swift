@@ -37,6 +37,11 @@ final class ClaudeService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
+    var hiddenUsageBars: Set<String> {
+        get { session.hiddenUsageBars }
+        set { session.hiddenUsageBars = newValue }
+    }
+
     var usagePool: ClaudeUsagePool {
         get { storedUsagePool }
         set {
@@ -62,6 +67,16 @@ final class ClaudeService: UsageDisplaying {
     var hasCredit = false
     var hasSession = false
     var hasWeekly = false
+
+    var usageBars: [UsageBar] {
+        let pools: [(pool: ClaudeUsagePool, isPresent: Bool)] = [
+            (.session, hasSession),
+            (.weekly, hasWeekly),
+            (.usageLimit, hasSpend),
+            (.credit, hasCredit)
+        ]
+        return pools.filter(\.isPresent).map { UsageBar(id: $0.pool.rawValue, title: $0.pool.label) }
+    }
 
     private var storedUsagePool: ClaudeUsagePool
 

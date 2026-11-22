@@ -51,9 +51,20 @@ final class AntigravityService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
+    var hiddenUsageBars: Set<String> {
+        get { session.hiddenUsageBars }
+        set { session.hiddenUsageBars = newValue }
+    }
+
     var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
 
     var groups: [AntigravityQuotaResponse.Group] = []
+
+    var usageBars: [UsageBar] {
+        groups.flatMap { group in
+            group.windows.map { UsageBar(id: $0.id, title: $0.title, section: group.name) }
+        }
+    }
 
     var usagePool: AntigravityUsagePool {
         get { storedUsagePool }

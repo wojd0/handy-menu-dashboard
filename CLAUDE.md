@@ -59,8 +59,8 @@ See `CONTEXT.md` for the domain glossary and `docs/adr/` for decisions that shou
   menu-bar fragment and the dashboard detail string. Always dollars or credits, never cents.
 - **`UsageMath`** — Leaf formatting and generic percent maths only. It must not learn provider names again;
   it still holds the five `Decodable` response structs.
-- **`ProviderPreferences`** — The only owner of the `<provider>Enabled` and `<provider>MenuBarShowPercent`
-  keys, derived from `Provider.rawValue`. `ProviderPreferencesTests` pins the derived strings against the
+- **`ProviderPreferences`** — The only owner of the `<provider>Enabled`, `<provider>MenuBarShowPercent` and
+  `<provider>HiddenUsageBars` keys, derived from `Provider.rawValue`. `ProviderPreferencesTests` pins the derived strings against the
   literals that shipped — a one-character drift would silently reset every user's saved settings.
 - **`CookieHarvest`** — The five sign-in harvest rules as testable data: start URL, path gate, domain match,
   session-cookie rule, website-data domains.
@@ -134,7 +134,10 @@ tick; Copilot, ChatGPT and Antigravity **discard** it. This is deliberate and pi
 - **SettingsView** — Provider cards plus the General section. You can reorder only the connected cards. The
   unconnected cards come last, with no drag handle and no "Show in menu bar" toggle. Each card is one generic
   `ProviderSettingsCard<Service, Extra>`; the Claude and Antigravity usage pool pickers pass through the `Extra`
-  slot. Antigravity shows two segmented pickers under one "Menu Bar Usage Pool" label: pool type, then pool time range.
+  slot. Each authenticated card has a "Popover Usage Bars" menu with one checkbox for each `UsageBar` of the
+  service. The setting stores the hidden bar IDs, so all bars show by default and new bars show when they appear.
+  Cursor, Copilot and ChatGPT have one bar. If all bars of a provider are hidden, the popover does not show its card.
+  Antigravity shows two segmented pickers under one "Menu Bar Usage Pool" label: pool type, then pool time range.
   The pool type picker sizes its segments to their titles, and each segment shows its title as a tooltip. The card is
   **generic, not existential** — `@Bindable var service: any UsageDisplaying` does not compile.
 - **CursorLoginView** / **ClaudeLoginView** — Simple `WKWebView` sheets that harvest cookies and persist them

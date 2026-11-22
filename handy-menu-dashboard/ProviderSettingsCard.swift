@@ -40,6 +40,8 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
 
                 extra
 
+                usageBarsMenu
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Menu Bar Unit")
                         .font(.callout)
@@ -91,6 +93,59 @@ struct ProviderSettingsCard<Service: UsageDisplaying, Extra: View>: View {
             },
             set: { service.menuBarDisplayMode = $0 }
         )
+    }
+
+    @ViewBuilder
+    private var usageBarsMenu: some View {
+        let bars = service.usageBars
+        if !bars.isEmpty {
+            HStack {
+                Text("Popover Usage Bars")
+                    .font(.callout)
+                Spacer()
+                Menu(usageBarsSummary(bars)) {
+                    ForEach(Array(usageBarSections(bars).enumerated()), id: \.offset) { _, section in
+                        if let title = section.title {
+                            Section(title) {
+                                usageBarToggles(section.bars)
+                            }
+                        } else {
+                            usageBarToggles(section.bars)
+                        }
+                    }
+                }
+                .menuIndicator(.visible)
+                .fixedSize()
+            }
+        }
+    }
+
+    private func usageBarToggles(_ bars: [UsageBar]) -> some View {
+        ForEach(bars) { bar in
+            Toggle(bar.title, isOn: Binding(
+                get: { service.showsUsageBar(bar.id) },
+                set: { service.setUsageBar(bar.id, shown: $0) }
+            ))
+        }
+    }
+
+    private func usageBarSections(_ bars: [UsageBar]) -> [(title: String?, bars: [UsageBar])] {
+        bars.reduce(into: []) { sections, bar in
+            if let last = sections.indices.last, sections[last].title == bar.section {
+                sections[last].bars.append(bar)
+            } else {
+                sections.append((bar.section, [bar]))
+            }
+        }
+    }
+
+    private func usageBarsSummary(_ bars: [UsageBar]) -> String {
+        let shown = bars.filter { service.showsUsageBar($0.id) }.count
+        switch shown {
+        case bars.count: return "All"
+        case 0: return "None"
+        default: return "\(shown) of \(bars.count)"
+        }
     }
 
     @ViewBuilder

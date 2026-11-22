@@ -13,17 +13,20 @@ struct AntigravityUsageCardView: View {
                     .foregroundStyle(.red)
             } else {
                 ForEach(service.groups, id: \.name) { group in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(group.name)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                    let windows = group.windows.filter { service.showsUsageBar($0.id) }
+                    if !windows.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(group.name)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
 
-                        ForEach(group.windows, id: \.id) { window in
-                            UsagePoolRow(
-                                title: window.title,
-                                percent: window.percentUsed,
-                                resetsAt: window.resetsAt
-                            )
+                            ForEach(windows, id: \.id) { window in
+                                UsagePoolRow(
+                                    title: window.title,
+                                    percent: window.percentUsed,
+                                    resetsAt: window.resetsAt
+                                )
+                            }
                         }
                     }
                 }

@@ -15,6 +15,11 @@ final class CopilotService: UsageDisplaying {
         set { session.menuBarDisplayMode = newValue }
     }
 
+    var hiddenUsageBars: Set<String> {
+        get { session.hiddenUsageBars }
+        set { session.hiddenUsageBars = newValue }
+    }
+
     var menuBarText: String { menuBarFragment(displayMode: menuBarDisplayMode) }
 
     var creditsUsed: Double = 0
